@@ -22,7 +22,7 @@ public class BeatTimer : MonoBehaviour
         timer=0f;
     }
 
- 
+    private bool flag=false;
     void FixedUpdate()
     {
         timer += Time.deltaTime;
@@ -30,6 +30,11 @@ public class BeatTimer : MonoBehaviour
         if (timer >= nextBeatTime+beatDivider)
         {   
             nextBeatTime += beatInterval;
+            flag=false;
+        }
+        if (timer >= nextBeatTime && flag==false)
+        {   
+            flag=true;
             OnBeat?.Invoke();
         }
 
@@ -45,7 +50,7 @@ public class BeatTimer : MonoBehaviour
             backGround.color = Color.black; // Close to the beat (red threshold)
         }
 
-        else if (timeToNextBeat <= beatDivider/2)
+        else if (timeToNextBeat <= beatDivider*2/3)
         {
             backGround.color = Color.red; // Close to the beat (red threshold)
         }

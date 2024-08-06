@@ -6,19 +6,23 @@ public class Triangle : MonoBehaviour
     public Vector2Int position;
     public GameController gameController; // Reference to GameController
     public AudioClip moveSound; // Sound to play when the triangle moves
+    public Vector2Int nextPosition; // Make nextPosition public
+    public Vector2Int currentDirection; // Make currentDirection public
 
     private AudioSource audioSource;
-    private Vector2Int nextPosition;
-    private Vector2Int currentDirection;
 
     void Start()
     {
         gameController = GameObject.Find("GameController").GetComponent<GameController>();
         position = new Vector2Int((int)(transform.position.x / gameController.tileSize), (int)(transform.position.y / gameController.tileSize));
-        
+
+        audioSource = GetComponent<AudioSource>();
+
         // Initialize the next position and current direction
-        nextPosition = position;
-        currentDirection = Vector2Int.up;
+        // These will now be set by the GameController
+
+        // Rotate the triangle to face the initial direction
+        RotateTowardsDirection(currentDirection);
 
         // Subscribe to the OnBeat event from the BeatTimer
         gameController.beatTimer.OnBeat += DecideNextMove;
@@ -32,15 +36,17 @@ public class Triangle : MonoBehaviour
 
     void DecideNextMove()
     {
-        currentDirection = GetRandomDirection();
-        // Determine the next direction and position
+        // Only update direction if the current direction leads to a valid position
         if (nextPosition.x >= 0 && nextPosition.x < 6 && nextPosition.y >= 0 && nextPosition.y < 6)
         {
             Move();
         }
-        
+
+        currentDirection = GetRandomDirection();
         nextPosition = position + currentDirection;
-        
+
+        // Rotate the triangle to face the direction of the next move
+        RotateTowardsDirection(currentDirection);
     }
 
     public void Move()
@@ -48,10 +54,6 @@ public class Triangle : MonoBehaviour
         // Update the triangle's position
         position = nextPosition;
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
-
-        // Rotate the triangle to face the direction it will move to next
-        Vector3 direction = new Vector3(currentDirection.x, currentDirection.y, 0);
-        transform.up = direction;
 
         // Play movement sound
         PlayMoveSound();
@@ -72,6 +74,11 @@ public class Triangle : MonoBehaviour
         return validDirections[rand];
     }
 
+    private void RotateTowardsDirection(Vector2Int direction)
+    {
+        Vector3 directionVector = new Vector3(direction.x, direction.y, 0);
+        transform.up = directionVector;
+    }
 
     private void PlayMoveSound()
     {
