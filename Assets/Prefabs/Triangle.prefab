@@ -28,7 +28,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -11.28141, y: 15.495272, z: 0}
-  m_LocalScale: {x: 3.48, y: 5.95, z: 1}
+  m_LocalScale: {x: 6, y: 8, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -100,3 +100,6 @@ MonoBehaviour:
   position: {x: 0, y: 0}
   gameController: {fileID: 0}
   moveSound: {fileID: 0}
+  nextPosition: {x: 0, y: 0}
+  currentDirection: {x: 0, y: 0}
+  powerLevel: 2

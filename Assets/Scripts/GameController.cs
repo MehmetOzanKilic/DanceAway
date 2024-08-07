@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameController : MonoBehaviour
 {
@@ -19,6 +20,8 @@ public class GameController : MonoBehaviour
     public AudioManager audioManager;
     [SerializeField]private int totalTrianglesToSpawn;
     private int trianglesSpawned;
+    
+    [SerializeField] private Text healthText; // UI element to display player's health
 
     void Start()
     {
@@ -51,7 +54,7 @@ public class GameController : MonoBehaviour
                 grid[x, y] = Instantiate(tilePrefab, new Vector2(x * tileSize, y * tileSize), Quaternion.identity);
                 grid[x, y].transform.localScale = new Vector3(tileSize, tileSize, 1);
                 grid[x, y].name = $"Tile_{x}_{y}";
-                if((x+y)%2==1) grid[x,y].GetComponent<SpriteRenderer>().color = Color.red;
+                if((x+y)%2==1) grid[x,y].GetComponent<SpriteRenderer>().color = Color.cyan;
             }
         }
     }
@@ -62,6 +65,7 @@ public class GameController : MonoBehaviour
         trianglesSpawned = 0;
         LoadLevel(1);
         SpawnEnemies(); // Ensure enemies are spawned when the game starts
+        UpdateHealthText(); // Update health display at the start of the game
     }
 
     void ChangeState(GameState newState)
@@ -189,6 +193,22 @@ public class GameController : MonoBehaviour
 
         // Default to moving up if neither condition is met (though this should not happen with current spawn logic)
         return Vector2Int.up;
+    }
+
+    public void RemoveEnemy(Triangle enemy)
+    {
+        if (enemies.Contains(enemy))
+        {
+            enemies.Remove(enemy);
+        }
+    }
+
+    public void UpdateHealthText()
+    {
+        if (healthText != null)
+        {
+            healthText.text = player.health.ToString();
+        }
     }
 
     void UpdateUI()

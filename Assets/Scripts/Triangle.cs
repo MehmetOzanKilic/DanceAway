@@ -8,6 +8,9 @@ public class Triangle : MonoBehaviour
     public AudioClip moveSound; // Sound to play when the triangle moves
     public Vector2Int nextPosition; // Make nextPosition public
     public Vector2Int currentDirection; // Make currentDirection public
+    public int powerLevel = 2; // Starting power level for triangles
+    private int health;
+    private SpriteRenderer spriteRenderer;
 
     private AudioSource audioSource;
 
@@ -15,8 +18,13 @@ public class Triangle : MonoBehaviour
     {
         gameController = GameObject.Find("GameController").GetComponent<GameController>();
         position = new Vector2Int((int)(transform.position.x / gameController.tileSize), (int)(transform.position.y / gameController.tileSize));
-
         audioSource = GetComponent<AudioSource>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        health = powerLevel * 600;
+        print("health: " + health);
+ 
+        // Set initial color based on power level
+        UpdateColor();
 
         // Initialize the next position and current direction
         // These will now be set by the GameController
@@ -55,8 +63,85 @@ public class Triangle : MonoBehaviour
         position = nextPosition;
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
 
+        // Check if the triangle steps on the player's position
+        if (position == gameController.player.position)
+        {
+            gameController.player.TakeDamage(200); // Example damage value, you can adjust as needed
+        }
+
+        // Check for merging with other triangles
+        CheckForMerging();
+
         // Play movement sound
         PlayMoveSound();
+    }
+
+    void CheckForMerging()
+    {
+        var trianglesToMerge = new List<Triangle>();
+        foreach (var triangle in gameController.enemies)
+        {
+            if (triangle != this && triangle.position == position && triangle.powerLevel == powerLevel)
+            {
+                trianglesToMerge.Add(triangle);
+            }
+        }
+
+        if (trianglesToMerge.Count > 0)
+        {
+            foreach (var triangle in trianglesToMerge)
+            {
+                gameController.RemoveEnemy(triangle);
+                Destroy(triangle.gameObject);
+            }
+            MergeTriangles(trianglesToMerge.Count + 1); // Including the current triangle
+        }
+    }
+
+    void MergeTriangles(int numberOfTriangles)
+    {
+        powerLevel = powerLevel * (int)Mathf.Pow(2, numberOfTriangles - 1);
+        health = powerLevel * 350;
+        UpdateColor(); // Update the color based on the new power level
+    }
+
+    void UpdateColor()
+    {
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        switch (powerLevel)
+        {
+            case 2:
+                spriteRenderer.color = Color.black;
+                break;
+            case 4:
+                spriteRenderer.color = Color.red;
+                break;
+            case 8:
+                spriteRenderer.color = Color.green;
+                break;
+            case 16:
+                spriteRenderer.color = Color.blue;
+                break;
+            default:
+                spriteRenderer.color = Color.white; // Default color if power level exceeds 16
+                break;
+        }
+    }
+
+    public void TakeDamage(int damage)
+    {
+        health -= damage;
+        print("health: " + health);
+        if (health <= 0)
+        {
+            // Notify GameController to remove this triangle
+            gameController.RemoveEnemy(this);
+            Destroy(gameObject);
+        }
     }
 
     private Vector2Int GetRandomDirection()

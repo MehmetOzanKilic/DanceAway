@@ -9,6 +9,7 @@ public class BeatTimer : MonoBehaviour
     public float nextBeatTime;
 
     public event Action OnBeat;
+    public event Action CanMove;
 
     public SpriteRenderer backGround;
 
@@ -23,6 +24,7 @@ public class BeatTimer : MonoBehaviour
     }
 
     private bool flag=false;
+    private bool canMoveflag=false;
     void FixedUpdate()
     {
         timer += Time.deltaTime;
@@ -31,6 +33,7 @@ public class BeatTimer : MonoBehaviour
         {   
             nextBeatTime += beatInterval;
             flag=false;
+            canMoveflag=true;   
         }
         if (timer >= nextBeatTime && flag==false)
         {   
@@ -57,6 +60,7 @@ public class BeatTimer : MonoBehaviour
         else if (timeToNextBeat <= beatDivider)
         {
             backGround.color = Color.green; // Close to the beat (green threshold)
+            if(canMoveflag==true){CanMove?.Invoke();canMoveflag=false;}
         }
         else
         {
