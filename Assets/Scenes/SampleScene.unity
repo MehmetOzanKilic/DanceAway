@@ -300,8 +300,8 @@ MonoBehaviour:
   m_AssetsPPU: 1
   m_RefResolutionX: 64
   m_RefResolutionY: 64
-  m_UpscaleRT: 0
-  m_PixelSnapping: 1
+  m_UpscaleRT: 1
+  m_PixelSnapping: 0
   m_CropFrameX: 1
   m_CropFrameY: 1
   m_StretchFill: 0
@@ -801,7 +801,7 @@ MonoBehaviour:
   levelManager: {fileID: 0}
   uiManager: {fileID: 0}
   audioManager: {fileID: 0}
-  totalTrianglesToSpawn: 15
+  totalTrianglesToSpawn: 12
   healthText: {fileID: 1901625005}
 --- !u!4 &1920807223
 Transform:
@@ -830,11 +830,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc9e994638c31a844a1fc4b8e1c9fbd9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  beatInterval: 0.4
+  beatInterval: 1
   nextBeatTime: 0
   backGround: {fileID: 0}
   timer: 0
-  beatDivider: 0.1
+  beatDivider: 0.3
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

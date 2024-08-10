@@ -11,17 +11,20 @@ public class GameController : MonoBehaviour
     public GameObject trianglePrefab; // Reference to the triangle prefab
     public float tileSize = 5.0f;
     public Player player;
-    public List<Triangle> enemies;
+    public List<Triangle> enemies = new List<Triangle>();
     public List<SpotlightSquare> spotlights;
     public SpectatorCrowd crowd;
     public DJ dj;
     public LevelManager levelManager;
     public UIManager uiManager;
     public AudioManager audioManager;
-    [SerializeField]private int totalTrianglesToSpawn;
+    [SerializeField] private int totalTrianglesToSpawn;
     private int trianglesSpawned;
-    
+
     [SerializeField] private Text healthText; // UI element to display player's health
+
+    private int beatCounter = 0;
+    private bool isSpawningEnemies = false; // Flag to track enemy spawning
 
     void Start()
     {
@@ -34,8 +37,76 @@ public class GameController : MonoBehaviour
 
     void HandleBeat()
     {
-        MoveActors();
-        SpawnEnemies();
+        Debug.Log("HandleBeat called");
+
+        beatCounter++;
+
+        foreach (var enemy in enemies)
+        {
+            enemy.Move();
+        }
+
+        if (beatCounter % 2 == 0 && isSpawningEnemies)
+        {
+            SpawnRemainingEnemies();
+        }
+
+        HandleMerging();
+    }
+
+    void HandleMerging()
+    {
+        var mergeGroups = new Dictionary<Vector2Int, List<Triangle>>();
+
+        // Group triangles by their positions
+        foreach (var enemy in enemies)
+        {
+            if (!mergeGroups.ContainsKey(enemy.position))
+            {
+                mergeGroups[enemy.position] = new List<Triangle>();
+            }
+            mergeGroups[enemy.position].Add(enemy);
+        }
+
+        // Merge triangles in the same position with the same power level and move count greater than 0
+        foreach (var group in mergeGroups.Values)
+        {
+            if (group.Count > 1)
+            {
+                var mergeCandidates = new List<Triangle>();
+                int powerLevel = group[0].powerLevel;
+
+                foreach (var triangle in group)
+                {
+                    if (triangle.powerLevel == powerLevel && triangle.moveCount > 0)
+                    {
+                        mergeCandidates.Add(triangle);
+                    }
+                }
+
+                if (mergeCandidates.Count > 1)
+                {
+                    MergeTriangles(mergeCandidates);
+                }
+            }
+        }
+    }
+
+    public void MergeTriangles(List<Triangle> mergeCandidates)
+    {
+        int numberOfTriangles = mergeCandidates.Count;
+        Triangle baseTriangle = mergeCandidates[0];
+
+        foreach (var triangle in mergeCandidates)
+        {
+            if (triangle != baseTriangle)
+            {
+                RemoveEnemy(triangle);
+                Destroy(triangle.gameObject);
+            }
+        }
+
+        baseTriangle.MergeTriangles(numberOfTriangles);
     }
 
     void CenterCamera()
@@ -54,7 +125,7 @@ public class GameController : MonoBehaviour
                 grid[x, y] = Instantiate(tilePrefab, new Vector2(x * tileSize, y * tileSize), Quaternion.identity);
                 grid[x, y].transform.localScale = new Vector3(tileSize, tileSize, 1);
                 grid[x, y].name = $"Tile_{x}_{y}";
-                if((x+y)%2==1) grid[x,y].GetComponent<SpriteRenderer>().color = Color.cyan;
+                if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
             }
         }
     }
@@ -64,8 +135,34 @@ public class GameController : MonoBehaviour
         ChangeState(GameState.Play);
         trianglesSpawned = 0;
         LoadLevel(1);
-        SpawnEnemies(); // Ensure enemies are spawned when the game starts
+        SpawnInitialEnemies(); // Ensure enemies are spawned when the game starts
         UpdateHealthText(); // Update health display at the start of the game
+    }
+
+    void SpawnInitialEnemies()
+    {
+        int spawnCount = Mathf.Min(6, totalTrianglesToSpawn - trianglesSpawned);
+        SpawnEnemies(spawnCount);
+
+        // Set the flag to true if there are more triangles to spawn
+        if (totalTrianglesToSpawn > 6)
+        {
+            isSpawningEnemies = true;
+        }
+    }
+
+    void SpawnRemainingEnemies()
+    {
+        if (trianglesSpawned < totalTrianglesToSpawn)
+        {
+            int spawnCount = Mathf.Min(6, totalTrianglesToSpawn - trianglesSpawned);
+            SpawnEnemies(spawnCount);
+
+            if (trianglesSpawned >= totalTrianglesToSpawn)
+            {
+                isSpawningEnemies = false; // Unset the flag once all triangles are spawned
+            }
+        }
     }
 
     void ChangeState(GameState newState)
@@ -121,9 +218,10 @@ public class GameController : MonoBehaviour
     {
     }
 
-    void SpawnEnemies()
+    private int nameCounter = 0;
+
+    void SpawnEnemies(int spawnCount)
     {
-        int spawnCount = Mathf.Min(6, totalTrianglesToSpawn - trianglesSpawned);
         HashSet<Vector2Int> occupiedPositions = new HashSet<Vector2Int>();
 
         // Add the player's current position to occupied positions
@@ -131,42 +229,47 @@ public class GameController : MonoBehaviour
 
         for (int i = 0; i < spawnCount; i++)
         {
-            Vector2Int spawnPosition = GetRandomSpawnPosition(occupiedPositions);
+            Vector2Int spawnPosition = GetOutsideSpawnPosition(occupiedPositions);
             if (spawnPosition != Vector2Int.zero)
             {
                 GameObject triangleObject = Instantiate(trianglePrefab, new Vector2(spawnPosition.x * tileSize, spawnPosition.y * tileSize), Quaternion.identity);
                 Triangle triangle = triangleObject.GetComponent<Triangle>();
-                triangle.position = spawnPosition;
-                triangle.gameController = this;
+                triangle.Initialize(spawnPosition, this,beatTimer);  // Use the Initialize method
+                print("spawnPosition: " + spawnPosition);
                 enemies.Add(triangle);
                 occupiedPositions.Add(spawnPosition);
+                triangle.name = ++nameCounter + "Triangle";
 
-                // Ensure the triangle's first move is inside the grid
-                triangle.currentDirection = GetInitialDirection(spawnPosition);
-                triangle.nextPosition = triangle.position + triangle.currentDirection;
+                // Ensure the triangle's first two moves are towards the inside of the grid
+                triangle.SetInitialMoves();
 
                 trianglesSpawned++;
             }
         }
     }
 
-    Vector2Int GetRandomSpawnPosition(HashSet<Vector2Int> occupiedPositions)
+    Vector2Int GetOutsideSpawnPosition(HashSet<Vector2Int> occupiedPositions)
     {
         List<Vector2Int> possiblePositions = new List<Vector2Int>();
+        Vector2Int playerPos = player.position;
+        List<Vector2Int> excludedPositions = GetExcludedPositions(playerPos);
 
-        // Add all possible positions on the left and right sides
+        // Generate positions just outside the grid on all sides, excluding those closest to the player
         for (int y = 0; y < 6; y++)
         {
-            Vector2Int leftPosition = new Vector2Int(0, y);
-            Vector2Int rightPosition = new Vector2Int(5, y);
-            if (!occupiedPositions.Contains(leftPosition))
-            {
+            Vector2Int abovePosition = new Vector2Int(y, 6); // Above the top row
+            Vector2Int belowPosition = new Vector2Int(y, -1); // Below the bottom row
+            Vector2Int leftPosition = new Vector2Int(-1, y); // Left of the leftmost column
+            Vector2Int rightPosition = new Vector2Int(6, y); // Right of the rightmost column
+
+            if (!occupiedPositions.Contains(abovePosition) && !excludedPositions.Contains(abovePosition))
+                possiblePositions.Add(abovePosition);
+            if (!occupiedPositions.Contains(belowPosition) && !excludedPositions.Contains(belowPosition))
+                possiblePositions.Add(belowPosition);
+            if (!occupiedPositions.Contains(leftPosition) && !excludedPositions.Contains(leftPosition))
                 possiblePositions.Add(leftPosition);
-            }
-            if (!occupiedPositions.Contains(rightPosition))
-            {
+            if (!occupiedPositions.Contains(rightPosition) && !excludedPositions.Contains(rightPosition))
                 possiblePositions.Add(rightPosition);
-            }
         }
 
         if (possiblePositions.Count == 0)
@@ -178,21 +281,43 @@ public class GameController : MonoBehaviour
         return possiblePositions[randIndex];
     }
 
-    Vector2Int GetInitialDirection(Vector2Int spawnPosition)
+    List<Vector2Int> GetExcludedPositions(Vector2Int playerPos)
     {
-        // If the triangle spawns on the left side, it should move right
-        if (spawnPosition.x == 0)
+        List<Vector2Int> excludedPositions = new List<Vector2Int>();
+
+        // Determine the side(s) closest to the player
+        int minDistanceToEdge = Mathf.Min(playerPos.x, 5 - playerPos.x, playerPos.y, 5 - playerPos.y);
+
+        if (playerPos.y == 5 - minDistanceToEdge)
         {
-            return Vector2Int.right;
+            for (int x = 0; x < 6; x++)
+            {
+                excludedPositions.Add(new Vector2Int(x, 6)); // Exclude top row spawns
+            }
         }
-        // If the triangle spawns on the right side, it should move left
-        else if (spawnPosition.x == 5)
+        if (playerPos.y == minDistanceToEdge)
         {
-            return Vector2Int.left;
+            for (int x = 0; x < 6; x++)
+            {
+                excludedPositions.Add(new Vector2Int(x, -1)); // Exclude bottom row spawns
+            }
+        }
+        if (playerPos.x == minDistanceToEdge)
+        {
+            for (int y = 0; y < 6; y++)
+            {
+                excludedPositions.Add(new Vector2Int(-1, y)); // Exclude left column spawns
+            }
+        }
+        if (playerPos.x == 5 - minDistanceToEdge)
+        {
+            for (int y = 0; y < 6; y++)
+            {
+                excludedPositions.Add(new Vector2Int(6, y)); // Exclude right column spawns
+            }
         }
 
-        // Default to moving up if neither condition is met (though this should not happen with current spawn logic)
-        return Vector2Int.up;
+        return excludedPositions;
     }
 
     public void RemoveEnemy(Triangle enemy)

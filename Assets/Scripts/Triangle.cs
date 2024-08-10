@@ -5,63 +5,127 @@ public class Triangle : MonoBehaviour
 {
     public Vector2Int position;
     public GameController gameController; // Reference to GameController
+    private BeatTimer beatTimer;
     public AudioClip moveSound; // Sound to play when the triangle moves
     public Vector2Int nextPosition; // Make nextPosition public
     public Vector2Int currentDirection; // Make currentDirection public
     public int powerLevel = 2; // Starting power level for triangles
+    public int moveCount = 0; // Move counter starting at 0
+    [SerializeField]private float speed;
     private int health;
     private SpriteRenderer spriteRenderer;
 
     private AudioSource audioSource;
 
-    void Start()
+    private List<Vector2Int> initialMoves = new List<Vector2Int>();
+
+    private Rigidbody2D rb;
+
+
+    public void Initialize(Vector2Int initialPosition, GameController controller, BeatTimer timer)
     {
-        gameController = GameObject.Find("GameController").GetComponent<GameController>();
-        position = new Vector2Int((int)(transform.position.x / gameController.tileSize), (int)(transform.position.y / gameController.tileSize));
+        position = initialPosition;
+        gameController = controller;
+        beatTimer = timer;
+        transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
+        nextPosition = position;
         audioSource = GetComponent<AudioSource>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+        rb = GetComponent<Rigidbody2D>();
+        speed = gameController.tileSize/(beatTimer.beatInterval/2);
         health = powerLevel * 600;
-        print("health: " + health);
- 
+        print("Initialize position: " + position);  // Ensure position is correctly printed
+
         // Set initial color based on power level
         UpdateColor();
-
-        // Initialize the next position and current direction
-        // These will now be set by the GameController
-
-        // Rotate the triangle to face the initial direction
-        RotateTowardsDirection(currentDirection);
-
-        // Subscribe to the OnBeat event from the BeatTimer
-        gameController.beatTimer.OnBeat += DecideNextMove;
     }
+
+    void Start()
+    {
+        // Ensure position is correctly printed during Start
+        print("Start position: " + position);  
+    }
+
+    private float moveTimer=0;
+    private bool canMove=true;
+    void FixedUpdate()
+    {
+        // Check if it's time to stop moving
+        if (moveTimer >= beatTimer.beatInterval / 3 && canMove)
+        {
+            canMove = false;
+            DecideNextMove();
+        }
+
+        // Move only if allowed and it's within the first half of the beat interval
+        if (canMove && moveTimer < beatTimer.beatInterval / 3)
+        {
+            float moveDistance = speed * Time.fixedDeltaTime; // Distance to move in one frame
+            rb.MovePosition(rb.position + new Vector2(currentDirection.x * moveDistance, currentDirection.y * moveDistance));
+        }
+        else
+        {
+            // Stop the movement after half-beat
+            rb.velocity = Vector2.zero;
+        }
+
+        moveTimer += Time.deltaTime;
+    }
+
 
     void OnDestroy()
     {
-        // Unsubscribe from the OnBeat event to prevent memory leaks
-        gameController.beatTimer.OnBeat -= DecideNextMove;
     }
 
-    void DecideNextMove()
+    public void SetInitialMoves()
     {
-        // Only update direction if the current direction leads to a valid position
-        if (nextPosition.x >= 0 && nextPosition.x < 6 && nextPosition.y >= 0 && nextPosition.y < 6)
+        if (position.y == 6) // Coming from above
         {
-            Move();
+            initialMoves.Add(Vector2Int.down);
+            initialMoves.Add(Vector2Int.down);
         }
+        else if (position.y == -1) // Coming from below
+        {
+            initialMoves.Add(Vector2Int.up);
+            initialMoves.Add(Vector2Int.up);
+        }
+        else if (position.x == -1) // Coming from the left
+        {
+            initialMoves.Add(Vector2Int.right);
+            initialMoves.Add(Vector2Int.right);
+        }
+        else if (position.x == 6) // Coming from the right
+        {
+            initialMoves.Add(Vector2Int.left);
+            initialMoves.Add(Vector2Int.left);
+        }
+    }
 
-        currentDirection = GetRandomDirection();
+    private Vector2Int prePosition;
+    public void DecideNextMove()
+    {
+        if (initialMoves.Count > 0)
+        {
+            currentDirection = initialMoves[0];
+            initialMoves.RemoveAt(0);
+        }
+        else
+        {
+            currentDirection = GetRandomValidDirection();
+        }
+        
         nextPosition = position + currentDirection;
-
-        // Rotate the triangle to face the direction of the next move
         RotateTowardsDirection(currentDirection);
     }
 
     public void Move()
     {
-        // Update the triangle's position
+        canMove=true;
+        moveTimer=0;
+        prePosition = position;
         position = nextPosition;
-        transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
+        //transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
+        moveCount++; // Increment move counter
 
         // Check if the triangle steps on the player's position
         if (position == gameController.player.position)
@@ -69,36 +133,11 @@ public class Triangle : MonoBehaviour
             gameController.player.TakeDamage(200); // Example damage value, you can adjust as needed
         }
 
-        // Check for merging with other triangles
-        CheckForMerging();
-
         // Play movement sound
         PlayMoveSound();
     }
 
-    void CheckForMerging()
-    {
-        var trianglesToMerge = new List<Triangle>();
-        foreach (var triangle in gameController.enemies)
-        {
-            if (triangle != this && triangle.position == position && triangle.powerLevel == powerLevel)
-            {
-                trianglesToMerge.Add(triangle);
-            }
-        }
-
-        if (trianglesToMerge.Count > 0)
-        {
-            foreach (var triangle in trianglesToMerge)
-            {
-                gameController.RemoveEnemy(triangle);
-                Destroy(triangle.gameObject);
-            }
-            MergeTriangles(trianglesToMerge.Count + 1); // Including the current triangle
-        }
-    }
-
-    void MergeTriangles(int numberOfTriangles)
+    public void MergeTriangles(int numberOfTriangles)
     {
         powerLevel = powerLevel * (int)Mathf.Pow(2, numberOfTriangles - 1);
         health = powerLevel * 350;
@@ -138,7 +177,6 @@ public class Triangle : MonoBehaviour
         print("health: " + health);
         if (health <= 0)
         {
-            // Notify GameController to remove this triangle
             gameController.RemoveEnemy(this);
             Destroy(gameObject);
         }
@@ -159,7 +197,51 @@ public class Triangle : MonoBehaviour
         return validDirections[rand];
     }
 
-    private void RotateTowardsDirection(Vector2Int direction)
+    private Vector2Int GetRandomValidDirection()
+    {
+        List<Vector2Int> directions = new List<Vector2Int>
+        {
+            Vector2Int.up,
+            Vector2Int.down,
+            Vector2Int.left,
+            Vector2Int.right
+        };
+
+        while (directions.Count > 0)
+        {
+            int index = Random.Range(0, directions.Count);
+            Vector2Int dir = directions[index];
+            Vector2Int nextPos = position + dir;
+
+            if (IsValidMove(nextPos))
+            {
+                return dir;
+            }
+
+            directions.RemoveAt(index);
+        }
+
+        return Vector2Int.zero; // Stay in place if no valid moves
+    }
+
+    private bool IsValidMove(Vector2Int nextPosition)
+    {
+        if (nextPosition.x < 0 || nextPosition.x >= 6 || nextPosition.y < 0 || nextPosition.y >= 6)
+        {
+            return false; // Out of bounds
+        }
+
+        foreach (var triangle in gameController.enemies)
+        {
+            if (triangle.powerLevel != powerLevel && triangle.nextPosition == nextPosition)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void RotateTowardsDirection(Vector2Int direction)
     {
         Vector3 directionVector = new Vector3(direction.x, direction.y, 0);
         transform.up = directionVector;

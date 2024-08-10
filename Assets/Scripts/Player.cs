@@ -16,7 +16,7 @@ public class Player : MonoBehaviour
     void Start()
     {
         gameController = GameObject.Find("GameController").GetComponent<GameController>();
-        position = new Vector2Int(0, 0); // Starting position at the bottom-left tile
+        position = new Vector2Int(2, 4); // Starting position at the bottom-left tile
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         audioSource = GetComponent<AudioSource>();
 
@@ -37,14 +37,15 @@ public class Player : MonoBehaviour
 
     public void Move(Vector2Int direction)
     {
-        if (!canMove)
+        float timeToNextBeat = Mathf.Abs(gameController.beatTimer.nextBeatTime - gameController.beatTimer.timer);
+
+        if (!canMove || timeToNextBeat>gameController.beatTimer.beatDivider)
         {
             return; // Ignore movement if not allowed
         }
 
         canMove = false; // Disallow further movement until the next beat
 
-        float timeToNextBeat = Mathf.Abs(gameController.beatTimer.nextBeatTime - gameController.beatTimer.timer);
 
         int scoreIncrement = 0;
         if (timeToNextBeat <= gameController.beatTimer.beatDivider / 3)
@@ -110,7 +111,7 @@ public class Player : MonoBehaviour
         var triangle = gameController.enemies.FirstOrDefault(t => t.position == position);
         if (triangle != null)
         {
-            TakeDamage(200); // Example damage value, you can adjust as needed
+            TakeDamage(50*triangle.powerLevel); // Example damage value, you can adjust as needed
         }
     }
 
