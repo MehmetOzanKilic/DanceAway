@@ -4,27 +4,30 @@ using UnityEngine.UI;
 
 public class GameController : MonoBehaviour
 {
+
     public BeatTimer beatTimer;
     public GameState currentState;
     public GameObject[,] grid = new GameObject[6, 6];
     public GameObject tilePrefab; // Reference to the tile prefab
     public GameObject trianglePrefab; // Reference to the triangle prefab
+    public GameObject spotLightPrefab;
     public float tileSize = 5.0f;
     public Player player;
     public List<Triangle> enemies = new List<Triangle>();
-    public List<SpotlightSquare> spotlights;
+    public List<SpotlightSquare> spotlights = new List<SpotlightSquare>();
     public SpectatorCrowd crowd;
     public DJ dj;
     public LevelManager levelManager;
     public UIManager uiManager;
     public AudioManager audioManager;
-    [SerializeField] private int totalTrianglesToSpawn;
+    private int totalTrianglesToSpawn;
     private int trianglesSpawned;
 
     [SerializeField] private Text healthText; // UI element to display player's health
 
     private int beatCounter = 0;
     private bool isSpawningEnemies = false; // Flag to track enemy spawning
+    [SerializeField]private int levelNo=1;
 
     void Start()
     {
@@ -45,13 +48,47 @@ public class GameController : MonoBehaviour
         {
             enemy.Move();
         }
+        
+        foreach (var spotlight in spotlights)
+        {
+            spotlight.Move();
+        }
 
         if (beatCounter % 2 == 0 && isSpawningEnemies)
         {
             SpawnRemainingEnemies();
         }
 
+        if(enemies.Count == 0 && !isSpawningEnemies)
+        {
+            levelNo++;
+            totalTrianglesToSpawn = levelNo;
+            trianglesSpawned = 0;
+            isSpawningEnemies = true;
+        }
+
         HandleMerging();
+        HandleSpotlightMerging();
+        SwitchColor();
+    }
+
+    void SwitchColor()
+    {
+        for(int x = 0; x<6; x++)
+        {
+            for (int y = 0; y<6; y++)
+            {
+                grid[x,y].GetComponent<SpriteRenderer>().color =  GetRandomColor();
+            }
+        }
+    }
+
+    private Color GetRandomColor()
+    {
+        float r = Random.Range(0f, 1f);
+        float g = Random.Range(0f, 1f);
+        float b = Random.Range(0f, 1f);
+        return new Color(r, g, b);
     }
 
     void HandleMerging()
@@ -92,21 +129,78 @@ public class GameController : MonoBehaviour
         }
     }
 
+    void HandleSpotlightMerging()
+    {
+        var mergeGroups = new Dictionary<Vector2Int, List<SpotlightSquare>>();
+
+        // Group spotlights by their positions
+        foreach (var spotlight in spotlights)
+        {
+            if (!mergeGroups.ContainsKey(spotlight.position))
+            {
+                mergeGroups[spotlight.position] = new List<SpotlightSquare>();
+            }
+            mergeGroups[spotlight.position].Add(spotlight);
+        }
+
+        // Merge spotlights in the same position with the same power level and move count greater than 0
+        foreach (var group in mergeGroups.Values)
+        {
+            if (group.Count > 1)
+            {
+                var mergeCandidates = new List<SpotlightSquare>();
+                int powerLevel = group[0].powerLevel;
+
+                foreach (var spotlight in group)
+                {
+                    if (spotlight.powerLevel == powerLevel && spotlight.moveCount > 0)
+                    {
+                        mergeCandidates.Add(spotlight);
+                    }
+                }
+
+                if (mergeCandidates.Count > 1)
+                {
+                    MergeSpotlights(mergeCandidates);
+                }
+            }
+        }
+    }
+
     public void MergeTriangles(List<Triangle> mergeCandidates)
     {
         int numberOfTriangles = mergeCandidates.Count;
         Triangle baseTriangle = mergeCandidates[0];
 
+        int healthSum=0;
         foreach (var triangle in mergeCandidates)
         {
             if (triangle != baseTriangle)
             {
                 RemoveEnemy(triangle);
                 Destroy(triangle.gameObject);
+                healthSum+=triangle.health;
             }
         }
 
-        baseTriangle.MergeTriangles(numberOfTriangles);
+        baseTriangle.MergeTriangles(numberOfTriangles,baseTriangle.health+healthSum);
+    }
+
+    public void MergeSpotlights(List<SpotlightSquare> mergeCandidates)
+    {
+        int numberOfSpotlights = mergeCandidates.Count;
+        SpotlightSquare baseSpotlight = mergeCandidates[0];
+
+        foreach (var spotlight in mergeCandidates)
+        {
+            if (spotlight != baseSpotlight)
+            {
+                RemoveSpotlight(spotlight);
+                Destroy(spotlight.gameObject);
+            }
+        }
+
+        baseSpotlight.MergeSpotlights(numberOfSpotlights);
     }
 
     void CenterCamera()
@@ -133,6 +227,7 @@ public class GameController : MonoBehaviour
     void StartGame()
     {
         ChangeState(GameState.Play);
+        totalTrianglesToSpawn = levelNo;
         trianglesSpawned = 0;
         LoadLevel(1);
         SpawnInitialEnemies(); // Ensure enemies are spawned when the game starts
@@ -234,8 +329,7 @@ public class GameController : MonoBehaviour
             {
                 GameObject triangleObject = Instantiate(trianglePrefab, new Vector2(spawnPosition.x * tileSize, spawnPosition.y * tileSize), Quaternion.identity);
                 Triangle triangle = triangleObject.GetComponent<Triangle>();
-                triangle.Initialize(spawnPosition, this,beatTimer);  // Use the Initialize method
-                print("spawnPosition: " + spawnPosition);
+                triangle.Initialize(spawnPosition, this, beatTimer);  // Use the Initialize method
                 enemies.Add(triangle);
                 occupiedPositions.Add(spawnPosition);
                 triangle.name = ++nameCounter + "Triangle";
@@ -246,6 +340,19 @@ public class GameController : MonoBehaviour
                 trianglesSpawned++;
             }
         }
+    }
+
+    private void SpawnSpotlight(Vector2Int position, int powerLevel)
+    {
+        GameObject spotlightObject = Instantiate(spotLightPrefab, new Vector2(position.x * tileSize, position.y * tileSize), Quaternion.identity);
+        SpotlightSquare spotlight = spotlightObject.GetComponent<SpotlightSquare>();
+        spotlight.Initialize(position, this, beatTimer, powerLevel);
+        addSpotlight(spotlight);
+    }
+
+    public void addSpotlight(SpotlightSquare spotlight)
+    {
+        spotlights.Add(spotlight);
     }
 
     Vector2Int GetOutsideSpawnPosition(HashSet<Vector2Int> occupiedPositions)
@@ -324,7 +431,16 @@ public class GameController : MonoBehaviour
     {
         if (enemies.Contains(enemy))
         {
+            SpawnSpotlight(enemy.position, enemy.powerLevel);
             enemies.Remove(enemy);
+        }
+    }
+
+    public void RemoveSpotlight(SpotlightSquare spotlight)
+    {
+        if (spotlights.Contains(spotlight))
+        {
+            spotlights.Remove(spotlight);
         }
     }
 

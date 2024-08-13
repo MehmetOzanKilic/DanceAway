@@ -39,27 +39,35 @@ public class Player : MonoBehaviour
     {
         float timeToNextBeat = Mathf.Abs(gameController.beatTimer.nextBeatTime - gameController.beatTimer.timer);
 
-        if (!canMove || timeToNextBeat>gameController.beatTimer.beatDivider)
+        if (!canMove || timeToNextBeat > gameController.beatTimer.beatDivider)
         {
             return; // Ignore movement if not allowed
         }
 
         canMove = false; // Disallow further movement until the next beat
 
-
         int scoreIncrement = 0;
-        if (timeToNextBeat <= gameController.beatTimer.beatDivider / 3)
+        if(gameController.enemies.Count > 0)
         {
-            scoreIncrement = 200; // Black threshold
+            if (gameController.beatTimer.backGround.color == Color.black)
+            {
+                scoreIncrement = 200; // Black threshold
+            }
+            else if (gameController.beatTimer.backGround.color == Color.red)
+            {
+                scoreIncrement = 150; // Red threshold
+            }
+            else if (gameController.beatTimer.backGround.color == Color.blue)
+            {
+                scoreIncrement = 100; // Red threshold
+            }
+            else if (gameController.beatTimer.backGround.color == Color.green)
+            {
+                scoreIncrement = 50; // Red threshold
+            }
+
         }
-        else if (timeToNextBeat <= gameController.beatTimer.beatDivider * 2 / 3)
-        {
-            scoreIncrement = 150; // Red threshold
-        }
-        else if (timeToNextBeat <= gameController.beatTimer.beatDivider)
-        {
-            scoreIncrement = 100; // Green threshold
-        }
+        
 
         Vector2Int newPosition = position + direction;
 
@@ -70,9 +78,6 @@ public class Player : MonoBehaviour
             position = newPosition;
             transform.position = new Vector2(newPosition.x * gameController.tileSize, newPosition.y * gameController.tileSize);
 
-            // Update score
-            score += scoreIncrement;
-
             // Play movement sound
             PlayMoveSound();
 
@@ -81,6 +86,12 @@ public class Player : MonoBehaviour
 
             // Check if the player lands on a triangle
             CheckPlayerCollision();
+
+            // Check if the player is on the same tile as a spotlight
+            CheckSpotlightCollision();
+
+            print(mult + "  " + scoreIncrement);
+            score += scoreIncrement*mult;
         }
     }
 
@@ -111,7 +122,22 @@ public class Player : MonoBehaviour
         var triangle = gameController.enemies.FirstOrDefault(t => t.position == position);
         if (triangle != null)
         {
-            TakeDamage(50*triangle.powerLevel); // Example damage value, you can adjust as needed
+            TakeDamage(50 * triangle.powerLevel); // Example damage value, you can adjust as needed
+        }
+    }
+    private int mult;
+    private void CheckSpotlightCollision()
+    {
+        var spotlight = gameController.spotlights.FirstOrDefault(s => s.nextPosition == position);
+
+        if (spotlight != null)
+        {
+            mult = spotlight.powerLevel; // Multiply score by the spotlight's power level
+            Debug.Log($"Player's score multiplied by {spotlight.powerLevel}. New score: {score}");
+        }
+        else
+        {
+            mult = 1;
         }
     }
 

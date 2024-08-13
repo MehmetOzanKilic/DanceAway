@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 public class Triangle : MonoBehaviour
 {
+    [SerializeField]private int baseHealth=200;    
     public Vector2Int position;
     public GameController gameController; // Reference to GameController
     private BeatTimer beatTimer;
@@ -12,7 +13,8 @@ public class Triangle : MonoBehaviour
     public int powerLevel = 2; // Starting power level for triangles
     public int moveCount = 0; // Move counter starting at 0
     [SerializeField]private float speed;
-    private int health;
+    [SerializeField]private GameObject spotlightPrefab;
+    public int health;
     private SpriteRenderer spriteRenderer;
 
     private AudioSource audioSource;
@@ -32,27 +34,25 @@ public class Triangle : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
-        speed = gameController.tileSize/(beatTimer.beatInterval/2);
-        health = powerLevel * 600;
-        print("Initialize position: " + position);  // Ensure position is correctly printed
-
+        speed = gameController.tileSize/(beatTimer.beatInterval/3);
+        health = powerLevel * baseHealth;
         // Set initial color based on power level
         UpdateColor();
     }
 
     void Start()
     {
-        // Ensure position is correctly printed during Start
-        print("Start position: " + position);  
+
     }
 
     private float moveTimer=0;
     private bool canMove=true;
     void FixedUpdate()
     {
-        // Check if it's time to stop moving
+        // Check if it time totop moving
         if (moveTimer >= beatTimer.beatInterval / 3 && canMove)
         {
+            transform.position=new Vector3(nextPosition.x*gameController.tileSize,nextPosition.y*gameController.tileSize,0);
             canMove = false;
             DecideNextMove();
         }
@@ -137,10 +137,10 @@ public class Triangle : MonoBehaviour
         PlayMoveSound();
     }
 
-    public void MergeTriangles(int numberOfTriangles)
+    public void MergeTriangles(int numberOfTriangles, int combinedHealth)
     {
         powerLevel = powerLevel * (int)Mathf.Pow(2, numberOfTriangles - 1);
-        health = powerLevel * 350;
+        health = combinedHealth + (powerLevel*baseHealth/2);
         UpdateColor(); // Update the color based on the new power level
     }
 
@@ -154,7 +154,7 @@ public class Triangle : MonoBehaviour
         switch (powerLevel)
         {
             case 2:
-                spriteRenderer.color = Color.black;
+                spriteRenderer.color = Color.white;
                 break;
             case 4:
                 spriteRenderer.color = Color.red;
@@ -174,7 +174,6 @@ public class Triangle : MonoBehaviour
     public void TakeDamage(int damage)
     {
         health -= damage;
-        print("health: " + health);
         if (health <= 0)
         {
             gameController.RemoveEnemy(this);

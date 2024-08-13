@@ -5,6 +5,7 @@ using Unity.Mathematics;
 
 public class BeatTimer : MonoBehaviour
 {
+    AudioSource audioSource;
     public float beatInterval = 1.0f; // Time between beats in seconds
     public float nextBeatTime;
 
@@ -18,6 +19,7 @@ public class BeatTimer : MonoBehaviour
 
     void Start()
     {
+        audioSource = GetComponent<AudioSource>();
         backGround = GameObject.Find("BackGround").GetComponent<SpriteRenderer>();
         nextBeatTime = Time.time + beatInterval;
         timer=0f;
@@ -25,6 +27,7 @@ public class BeatTimer : MonoBehaviour
 
     private bool flag=false;
     private bool canMoveflag=false;
+    private bool auidoFlag=true;
     void FixedUpdate()
     {
         timer += Time.deltaTime;
@@ -39,23 +42,37 @@ public class BeatTimer : MonoBehaviour
         {   
             flag=true;
             OnBeat?.Invoke();
+            if(auidoFlag)
+            {
+                Invoke("PlayAudio",0.2f);
+                auidoFlag=false;
+            }
         }
 
         UpdateBackgroundColor(nextBeatTime);
+    }
+
+    void PlayAudio()
+    {
+        audioSource.Play();
     }
     
     void UpdateBackgroundColor(float nextBeatTime)
     {
         float timeToNextBeat = Mathf.Abs(nextBeatTime - timer);
 
-        if (timeToNextBeat <= beatDivider/3)
+        if (timeToNextBeat <= beatDivider/10)
         {
             backGround.color = Color.black; // Close to the beat (red threshold)
         }
 
-        else if (timeToNextBeat <= beatDivider*2/3)
+        else if (timeToNextBeat <= beatDivider/5)
         {
             backGround.color = Color.red; // Close to the beat (red threshold)
+        }
+        else if (timeToNextBeat <= beatDivider/1.5f)
+        {
+            backGround.color = Color.blue; // Close to the beat (green threshold)
         }
         else if (timeToNextBeat <= beatDivider)
         {
