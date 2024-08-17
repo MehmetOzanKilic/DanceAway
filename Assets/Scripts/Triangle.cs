@@ -5,6 +5,8 @@ public class Triangle : MonoBehaviour
 {
     [SerializeField]private int baseHealth=200;    
     public Vector2Int position;
+    public Vector2Int previousPosition; // To track the previous position
+
     public GameController gameController; // Reference to GameController
     private BeatTimer beatTimer;
     public AudioClip moveSound; // Sound to play when the triangle moves
@@ -22,6 +24,7 @@ public class Triangle : MonoBehaviour
     private List<Vector2Int> initialMoves = new List<Vector2Int>();
 
     private Rigidbody2D rb;
+    public bool isChasingPlayer = false;
 
 
     public void Initialize(Vector2Int initialPosition, GameController controller, BeatTimer timer)
@@ -101,10 +104,13 @@ public class Triangle : MonoBehaviour
         }
     }
 
-    private Vector2Int prePosition;
     public void DecideNextMove()
     {
-        if (initialMoves.Count > 0)
+        if (isChasingPlayer)
+        {
+            currentDirection = GetDirectionTowardsPlayer();
+        }
+        else if (initialMoves.Count > 0)
         {
             currentDirection = initialMoves[0];
             initialMoves.RemoveAt(0);
@@ -113,16 +119,34 @@ public class Triangle : MonoBehaviour
         {
             currentDirection = GetRandomValidDirection();
         }
-        
+
         nextPosition = position + currentDirection;
         RotateTowardsDirection(currentDirection);
     }
+
+    // New method to get direction towards the player
+    private Vector2Int GetDirectionTowardsPlayer()
+    {
+        Vector2Int playerPos = gameController.player.position;
+        Vector2Int direction = Vector2Int.zero;
+
+        if (position.x < playerPos.x) direction = Vector2Int.right;
+        else if (position.x > playerPos.x) direction = Vector2Int.left;
+        else if (position.y < playerPos.y) direction = Vector2Int.up;
+        else if (position.y > playerPos.y) direction = Vector2Int.down;
+
+        if (IsValidMove(position + direction))
+            return direction;
+
+        return GetRandomValidDirection(); // Fallback to random move if the direct path is blocked
+    }
+
 
     public void Move()
     {
         canMove=true;
         moveTimer=0;
-        prePosition = position;
+        previousPosition = position;
         position = nextPosition;
         //transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         moveCount++; // Increment move counter
@@ -130,7 +154,7 @@ public class Triangle : MonoBehaviour
         // Check if the triangle steps on the player's position
         if (position == gameController.player.position)
         {
-            gameController.player.TakeDamage(200); // Example damage value, you can adjust as needed
+            gameController.player.TakeDamage(powerLevel); // Example damage value, you can adjust as needed
         }
 
         // Play movement sound

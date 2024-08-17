@@ -1,20 +1,30 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Audio;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class GameController : MonoBehaviour
 {
-
+    [SerializeField]private GameObject filter;
+    private SpriteRenderer filterSR;
+    public int waitSeconds=1;
+    AudioSource[] audioSources;  
+    [SerializeField]private GameObject healthPrefab;
     public BeatTimer beatTimer;
     public GameState currentState;
     public GameObject[,] grid = new GameObject[6, 6];
+    public GameObject[] health = new GameObject[100];
     public GameObject tilePrefab; // Reference to the tile prefab
     public GameObject trianglePrefab; // Reference to the triangle prefab
     public GameObject spotLightPrefab;
+    public GameObject heartPrefab;
     public float tileSize = 5.0f;
     public Player player;
     public List<Triangle> enemies = new List<Triangle>();
     public List<SpotlightSquare> spotlights = new List<SpotlightSquare>();
+    public List<GameObject> hearts = new List<GameObject>();
     public SpectatorCrowd crowd;
     public DJ dj;
     public LevelManager levelManager;
@@ -22,25 +32,36 @@ public class GameController : MonoBehaviour
     public AudioManager audioManager;
     private int totalTrianglesToSpawn;
     private int trianglesSpawned;
-
-    [SerializeField] private Text healthText; // UI element to display player's health
-
     private int beatCounter = 0;
     private bool isSpawningEnemies = false; // Flag to track enemy spawning
     [SerializeField]private int levelNo=1;
+    [SerializeField]private float spawnChance = 0.4f;
+    private float change;
 
+    public GameObject endScreen;
     void Start()
     {
         CenterCamera();
         InitializeGrid();
         StartGame();
+        audioSources = GetComponents<AudioSource>();
+        for(int i = 0; i < 6; i++)
+        {
+            audioSources[i].Stop();
+            audioSources[i].pitch = 0.8333f;
+        }
+        levelText.gameObject.SetActive(false);
+        filterSR = filter.GetComponent<SpriteRenderer>();
+        change = Random.Range(0, 360);
+        endScreen.SetActive(false);
+        
 
         beatTimer.OnBeat += HandleBeat;
     }
 
+    private bool canSpawn = true;
     void HandleBeat()
     {
-        Debug.Log("HandleBeat called");
 
         beatCounter++;
 
@@ -56,20 +77,209 @@ public class GameController : MonoBehaviour
 
         if (beatCounter % 2 == 0 && isSpawningEnemies)
         {
-            SpawnRemainingEnemies();
+            if(canSpawn)SpawnRemainingEnemies();
         }
 
         if(enemies.Count == 0 && !isSpawningEnemies)
         {
-            levelNo++;
-            totalTrianglesToSpawn = levelNo;
-            trianglesSpawned = 0;
-            isSpawningEnemies = true;
+            LoadLevel();
         }
 
         HandleMerging();
         HandleSpotlightMerging();
         SwitchColor();
+    }
+    public void UpdateChasingTriangle()
+    {
+        Triangle highestPowerTriangle = null;
+
+        foreach (var triangle in enemies)
+        {
+            if (highestPowerTriangle == null || triangle.powerLevel > highestPowerTriangle.powerLevel)
+            {
+                if (highestPowerTriangle != null)
+                    highestPowerTriangle.isChasingPlayer = false; // Stop the previous chaser
+
+                highestPowerTriangle = triangle;
+            }
+        }
+
+        if (highestPowerTriangle != null)
+            highestPowerTriangle.isChasingPlayer = true;
+    }
+
+
+    public int avarage=200;
+    public void PlayHand()
+    {   
+        if(avarage<75)
+        {
+            audioSources[1].Stop();
+        }
+        if(avarage<125)
+        {
+            audioSources[2].Stop();
+        }
+        if(avarage>=75)
+        {
+            audioSources[1].volume = 0.1f;
+            audioSources[1].Play();
+        }
+        if(avarage>=125)
+        {
+            audioSources[2].volume = 0.3f;
+            audioSources[2].Play();
+        }
+        
+        if(levelNo>=30)
+        {
+            audioSources[5].volume = 0.3f;
+            audioSources[5].Play();
+        }
+        else if(levelNo>=20)
+        {
+            audioSources[4].volume = 0.3f;
+            audioSources[4].Play();
+        }
+        else if(levelNo>=10)
+        {
+            audioSources[3].volume = 0.3f;
+            audioSources[3].Play();
+        } 
+    }
+
+    public void PlayBack()
+    {
+        audioSources[0].Play();
+    }
+
+    private bool flag5=true;
+    private void LoadLevel()
+    {
+        if(((levelNo+1)%5)==0 && flag5)
+        {   
+            levelNo++;
+            flag5 = false;
+            StartCoroutine(Load5());
+            flag5 = true;
+        }
+
+        else if (flag5)
+        {
+            levelNo++;
+        }
+
+        totalTrianglesToSpawn = levelNo;
+        trianglesSpawned = 0;
+        isSpawningEnemies = true;
+    }
+
+    private IEnumerator Load5()
+    {
+        canSpawn=false;
+        OpenLevelText();
+        yield return new WaitForSeconds(waitSeconds);
+        StopMusic();
+        ChangePitch();
+        CloseLevelText();
+        StartMusic();
+        yield return new WaitForSeconds(waitSeconds);
+        canSpawn=true;
+    }
+
+    private void StartMusic()
+    {
+        beatTimer.canPlay=true;
+    }
+
+    private void StopMusic()
+    {
+        beatTimer.beatCounter=0;
+        beatTimer.canPlay=false;
+        for (int i = 1; i < 6; i++)
+        {
+            audioSources[i].Stop();
+        }
+    }
+
+    private void ChangePitch()
+    {
+        if(levelNo == 5)
+        {
+            beatTimer.beatInterval = 0.571f;
+            for (int i = 0; i < 6; i++)
+            {
+                audioSources[i].pitch = 0.875f;
+            }
+        }
+        else if(levelNo == 10)
+        {
+            beatTimer.beatInterval = 0.545f;
+            for (int i = 0; i < 6; i++)
+            {
+                audioSources[i].pitch = 0.9167f;
+            }
+        }
+        else if(levelNo == 15)
+        {
+            beatTimer.beatInterval = 0.5217f;
+            for (int i = 0; i < 6; i++)
+            {
+                audioSources[i].pitch = 0.9583f;
+            }
+        }
+        else if(levelNo == 20)
+        {
+            beatTimer.beatInterval = 0.5f;
+            for (int i = 0; i < 6; i++)
+            {
+                audioSources[i].pitch = 1f;
+            }
+        }
+        else if(levelNo == 25)
+        {
+            beatTimer.beatInterval = 0.48f;
+            for (int i = 0; i < 6; i++)
+            {
+                audioSources[i].pitch = 1.0417f;
+            }
+        }
+        else if(levelNo == 30)
+        {
+            beatTimer.beatInterval = 0.4615f;
+            for (int i = 0; i < 6; i++)
+            {
+                audioSources[i].pitch = 1.0833f;
+            }
+        }
+        else if(levelNo == 35 )
+        {
+            beatTimer.beatInterval = 0.4444f;
+            for (int i = 0; i < 6; i++)
+            {
+                audioSources[i].pitch = 1.125f;
+            }
+        }
+        else
+        {
+            beatTimer.beatInterval = 0.4286f;
+            for (int i = 0; i < 6; i++)
+            {
+                audioSources[i].pitch = 1.1667f;
+            }
+        }
+    }
+
+    [SerializeField]private GameController levelShower;
+    [SerializeField]private Text levelText;
+    private void OpenLevelText()
+    {
+        levelText.text = "Level " + levelNo;
+        levelText.gameObject.SetActive(true);
+    }
+    private void CloseLevelText()
+    {
+        levelText.gameObject.SetActive(false);
     }
 
     void SwitchColor()
@@ -95,7 +305,7 @@ public class GameController : MonoBehaviour
     {
         var mergeGroups = new Dictionary<Vector2Int, List<Triangle>>();
 
-        // Group triangles by their positions
+        // Group triangles by their current and previous positions
         foreach (var enemy in enemies)
         {
             if (!mergeGroups.ContainsKey(enemy.position))
@@ -103,9 +313,18 @@ public class GameController : MonoBehaviour
                 mergeGroups[enemy.position] = new List<Triangle>();
             }
             mergeGroups[enemy.position].Add(enemy);
+
+            if (enemy.previousPosition != enemy.position) // If the triangle moved, consider its previous position too
+            {
+                if (!mergeGroups.ContainsKey(enemy.previousPosition))
+                {
+                    mergeGroups[enemy.previousPosition] = new List<Triangle>();
+                }
+                mergeGroups[enemy.previousPosition].Add(enemy);
+            }
         }
 
-        // Merge triangles in the same position with the same power level and move count greater than 0
+        // Merge triangles that have crossed paths or are on the same tile with the same power level and move count greater than 0
         foreach (var group in mergeGroups.Values)
         {
             if (group.Count > 1)
@@ -129,11 +348,12 @@ public class GameController : MonoBehaviour
         }
     }
 
+
     void HandleSpotlightMerging()
     {
         var mergeGroups = new Dictionary<Vector2Int, List<SpotlightSquare>>();
 
-        // Group spotlights by their positions
+        // Group spotlights by their current and previous positions
         foreach (var spotlight in spotlights)
         {
             if (!mergeGroups.ContainsKey(spotlight.position))
@@ -141,9 +361,18 @@ public class GameController : MonoBehaviour
                 mergeGroups[spotlight.position] = new List<SpotlightSquare>();
             }
             mergeGroups[spotlight.position].Add(spotlight);
+
+            if (spotlight.previousPosition != spotlight.position) // If the spotlight moved, consider its previous position too
+            {
+                if (!mergeGroups.ContainsKey(spotlight.previousPosition))
+                {
+                    mergeGroups[spotlight.previousPosition] = new List<SpotlightSquare>();
+                }
+                mergeGroups[spotlight.previousPosition].Add(spotlight);
+            }
         }
 
-        // Merge spotlights in the same position with the same power level and move count greater than 0
+        // Merge spotlights that have crossed paths or are on the same tile with the same power level and move count greater than 0
         foreach (var group in mergeGroups.Values)
         {
             if (group.Count > 1)
@@ -167,6 +396,7 @@ public class GameController : MonoBehaviour
         }
     }
 
+
     public void MergeTriangles(List<Triangle> mergeCandidates)
     {
         int numberOfTriangles = mergeCandidates.Count;
@@ -178,6 +408,7 @@ public class GameController : MonoBehaviour
             if (triangle != baseTriangle)
             {
                 RemoveEnemy(triangle);
+                UpdateChasingTriangle();
                 Destroy(triangle.gameObject);
                 healthSum+=triangle.health;
             }
@@ -222,6 +453,13 @@ public class GameController : MonoBehaviour
                 if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
             }
         }
+
+        for(int i = 0; i<46; i++)
+        {
+            health[i] = Instantiate(healthPrefab, new Vector2(-6, -2.5f+(i*1)), Quaternion.identity);
+            health[i].transform.Rotate(0,0,90);
+            health[i].transform.localScale = new Vector3(1.2f,1.2f,1);
+        }
     }
 
     void StartGame()
@@ -229,9 +467,9 @@ public class GameController : MonoBehaviour
         ChangeState(GameState.Play);
         totalTrianglesToSpawn = levelNo;
         trianglesSpawned = 0;
-        LoadLevel(1);
+        //(1);
         SpawnInitialEnemies(); // Ensure enemies are spawned when the game starts
-        UpdateHealthText(); // Update health display at the start of the game
+        UpdateChasingTriangle();
     }
 
     void SpawnInitialEnemies()
@@ -257,6 +495,8 @@ public class GameController : MonoBehaviour
             {
                 isSpawningEnemies = false; // Unset the flag once all triangles are spawned
             }
+
+            UpdateChasingTriangle();
         }
     }
 
@@ -289,7 +529,17 @@ public class GameController : MonoBehaviour
             MoveActors();
             CheckCollisions();
             UpdateUI();
+            FilterColor();
         }
+    }
+
+    private void FilterColor()
+    {
+        change += Time.deltaTime;
+        float val = (change%360)/360;
+        Color color = Color.HSVToRGB(val,0.75f,1); 
+        color.a = 0.8f;
+        filterSR.color = color;
     }
 
     void HandleInput()
@@ -304,10 +554,6 @@ public class GameController : MonoBehaviour
     {
     }
 
-    void LoadLevel(int levelNumber)
-    {
-        //levelManager.LoadLevel(levelNumber);
-    }
 
     void GenerateLevel()
     {
@@ -342,13 +588,54 @@ public class GameController : MonoBehaviour
         }
     }
 
-    private void SpawnSpotlight(Vector2Int position, int powerLevel)
+    private void SpawnSpotlight_Heart(Vector2Int position, int powerLevel)
     {
-        GameObject spotlightObject = Instantiate(spotLightPrefab, new Vector2(position.x * tileSize, position.y * tileSize), Quaternion.identity);
-        SpotlightSquare spotlight = spotlightObject.GetComponent<SpotlightSquare>();
-        spotlight.Initialize(position, this, beatTimer, powerLevel);
-        addSpotlight(spotlight);
+        // Generate a random value between 0 and 1
+        float randomValue = UnityEngine.Random.Range(0f, 1f);
+
+        // Check if the random value is less than the spawn chance
+        if (randomValue <= spawnChance)
+        {
+            GameObject spotlightObject = Instantiate(spotLightPrefab, new Vector2(position.x * tileSize, position.y * tileSize), Quaternion.identity);
+            SpotlightSquare spotlight = spotlightObject.GetComponent<SpotlightSquare>();
+            spotlight.Initialize(position, this, beatTimer, powerLevel);
+            addSpotlight(spotlight);
+        }
+
+        if (randomValue >= 0.95f)
+        {
+            GameObject heartObject = Instantiate(heartPrefab, new Vector2(position.x * tileSize, position.y * tileSize), Quaternion.identity);
+            hearts.Add(heartObject);
+        }
     }
+
+    public void CheckPlayerHeartCollision()
+    {
+        foreach (var heart in hearts)
+        {
+            Vector2Int heartPosition = Vector2Int.RoundToInt(new Vector2(heart.transform.position.x / tileSize, heart.transform.position.y / tileSize));
+
+            if (player.position == heartPosition)
+            {
+                // Player is on the same tile as the heart
+                CollectHeart(heart);
+                break;
+            }
+        }
+    }
+
+    // Function to handle collecting the heart
+    private void CollectHeart(GameObject heart)
+    {
+        // Add logic here to increase the player's health or score
+        Debug.Log("Heart collected!");
+
+        player.TakeDamage(-10);
+        // Remove the heart from the list and destroy the heart object
+        hearts.Remove(heart);
+        Destroy(heart);
+    }
+
 
     public void addSpotlight(SpotlightSquare spotlight)
     {
@@ -431,8 +718,9 @@ public class GameController : MonoBehaviour
     {
         if (enemies.Contains(enemy))
         {
-            SpawnSpotlight(enemy.position, enemy.powerLevel);
+            SpawnSpotlight_Heart(enemy.position, enemy.powerLevel);
             enemies.Remove(enemy);
+            UpdateChasingTriangle();
         }
     }
 
@@ -444,13 +732,6 @@ public class GameController : MonoBehaviour
         }
     }
 
-    public void UpdateHealthText()
-    {
-        if (healthText != null)
-        {
-            healthText.text = player.health.ToString();
-        }
-    }
 
     void UpdateUI()
     {
@@ -474,11 +755,6 @@ public class GameController : MonoBehaviour
         //audioManager.PlayMusic();
     }
 
-    void StopMusic()
-    {
-        //audioManager.StopMusic();
-    }
-
     void PlaySoundEffect(string effectName)
     {
         //audioManager.PlaySoundEffect(effectName);
@@ -491,4 +767,16 @@ public class GameController : MonoBehaviour
     void OnEnemyDefeated(Triangle enemy)
     {
     }
+
+    public void Retry()
+    {
+        SceneManager.LoadScene("Game");
+    }
+
+    
+    public void OpenEndScreen()
+    {
+        endScreen.SetActive(true);
+    }
+
 }

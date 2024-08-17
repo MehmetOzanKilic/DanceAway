@@ -1,10 +1,16 @@
 using UnityEngine;
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.Audio;
+using UnityEngine.UI;
 using System.Threading;
 using Unity.Mathematics;
 
 public class BeatTimer : MonoBehaviour
-{
+{   
+    public AudioMixer audioMixer;
+    private GameController gameController;
     AudioSource audioSource;
     public float beatInterval = 1.0f; // Time between beats in seconds
     public float nextBeatTime;
@@ -17,44 +23,92 @@ public class BeatTimer : MonoBehaviour
     public float timer;
     public float beatDivider=2f;
 
+    void Awake()
+    {
+        audioSource = GetComponent<AudioSource>();
+        backGround = GameObject.Find("BackGround").GetComponent<SpriteRenderer>();
+    }
     void Start()
+    {   
+        Initialize();
+        Invoke("FlagFalse", 2);
+    }
+
+    private bool flag=true;
+    private void FlagFalse()
+    {
+        flag = false;
+    }
+    public void Initialize()
     {
         audioSource = GetComponent<AudioSource>();
         backGround = GameObject.Find("BackGround").GetComponent<SpriteRenderer>();
         nextBeatTime = Time.time + beatInterval;
+        gameController = GetComponent<GameController>();    
+        //audioMixer.SetFloat("PitchShift", 1f);
         timer=0f;
+
+        //audioMixer.SetFloat("PitchShift",0.8333f);
     }
 
-    private bool flag=false;
+
     private bool canMoveflag=false;
     private bool auidoFlag=true;
+    public bool canPlay=true;
+    public int beatCounter=0;
+    public float beatOffset = 0.1f; // Adjust this value to control the beat offset (in seconds)
+
     void FixedUpdate()
     {
         timer += Time.deltaTime;
 
-        if (timer >= nextBeatTime+beatDivider)
+        if (timer >= nextBeatTime + beatDivider + beatOffset)
         {   
             nextBeatTime += beatInterval;
-            flag=false;
-            canMoveflag=true;   
+            flag = false;
+            canMoveflag = true;   
         }
-        if (timer >= nextBeatTime && flag==false)
+
+        if (timer >= nextBeatTime + beatOffset && flag == false)
         {   
-            flag=true;
+            flag = true;
             OnBeat?.Invoke();
-            if(auidoFlag)
+            
+            if (beatCounter == 0 && canPlay)
             {
-                Invoke("PlayAudio",0.2f);
-                auidoFlag=false;
+                Invoke("PlayBack", 0);
+                Invoke("PlayHand", 0);
+                beatCounter++;
+            }
+            else if (beatCounter % 16 == 0 && canPlay)
+            {
+                Invoke("PlayHand", 0f);
+                beatCounter++;
+            }
+            else if(canPlay)
+            {
+                beatCounter++;
+            }
+
+            
+            if (auidoFlag)
+            {
+                //Invoke("PlayAudio", 0.2f);
+                auidoFlag = false;
             }
         }
 
         UpdateBackgroundColor(nextBeatTime);
     }
 
-    void PlayAudio()
+    private void PlayBack()
     {
-        audioSource.Play();
+        if(gameController)gameController.PlayBack();
+    }
+    void PlayHand()
+    {
+        print("playHand");
+        if(gameController)gameController.PlayHand();
     }
     
     void UpdateBackgroundColor(float nextBeatTime)

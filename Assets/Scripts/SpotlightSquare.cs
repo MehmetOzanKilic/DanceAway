@@ -4,6 +4,8 @@ using System.Collections.Generic;
 public class SpotlightSquare: MonoBehaviour
 {
     public Vector2Int position;
+    public Vector2Int previousPosition; // To track the previous position
+
     public GameController gameController; // Reference to GameController
     private BeatTimer beatTimer;
     public AudioClip moveSound; // Sound to play when the spotlight moves
@@ -32,7 +34,7 @@ public class SpotlightSquare: MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
-        speed = gameController.tileSize / (beatTimer.beatInterval / 3);
+        speed = gameController.tileSize / beatTimer.beatInterval;
         health = powerLevel * 600; // Same health formula as Triangle
 
         // Set initial color based on power level
@@ -71,10 +73,10 @@ public class SpotlightSquare: MonoBehaviour
         moveTimer += Time.deltaTime;*/
         if (canMove)
         {
-            transform.position=new Vector3(nextPosition.x*gameController.tileSize,nextPosition.y*gameController.tileSize,0);
-            canMove = false;
-            DecideNextMove();
+            float moveDistance = speed * Time.fixedDeltaTime; // Distance to move in one frame
+            rb.MovePosition(rb.position + new Vector2(currentDirection.x * moveDistance, currentDirection.y * moveDistance));
         }
+        
     }
 
     void OnDestroy()
@@ -101,15 +103,17 @@ public class SpotlightSquare: MonoBehaviour
 
     public void Move()
     {
+        DecideNextMove();
         canMove = true;
         moveTimer = 0;
-        prePosition = position;
-        position = nextPosition;
+        previousPosition = position; // Store the current position as the previous position
+        position = nextPosition;     // Update the current position to the next position
         moveCount++; // Increment move counter
 
         // Play movement sound
         PlayMoveSound();
     }
+
 
     public void MergeSpotlights(int numberOfSpotlights)
     {
@@ -125,22 +129,48 @@ public class SpotlightSquare: MonoBehaviour
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
 
+        Color color;
         switch (powerLevel)
         {
             case 2:
-                spriteRenderer.color = Color.yellow;
+                color = Color.white;
+                color.a = 0.5f;
+                spriteRenderer.color = color;
                 break;
             case 4:
-                spriteRenderer.color = Color.magenta;
+                color = Color.cyan;
+                color.a = 0.5f;
+                spriteRenderer.color = color;
                 break;
             case 8:
-                spriteRenderer.color = Color.cyan;
+                color = Color.magenta;
+                color.a = 0.5f;
+                spriteRenderer.color = color;
                 break;
             case 16:
-                spriteRenderer.color = Color.white;
+                color = Color.red;
+                color.a = 0.5f;
+                spriteRenderer.color = color;
+                break;
+            case 32:
+                color = Color.blue;
+                color.a = 0.5f;
+                spriteRenderer.color = color;
+                break;
+            case 64:
+                color = Color.green;
+                color.a = 0.5f;
+                spriteRenderer.color = color;
+                break;
+            case 128:
+                color = Color.yellow;
+                color.a = 0.5f;
+                spriteRenderer.color = color;
                 break;
             default:
-                spriteRenderer.color = Color.gray; // Default color if power level exceeds 16
+                color = Color.grey;
+                color.a = 0.5f;
+                spriteRenderer.color = color; // Default color if power level exceeds 16
                 break;
         }
     }
