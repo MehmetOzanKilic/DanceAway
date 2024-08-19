@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
 
 public class Triangle : MonoBehaviour
 {
@@ -144,10 +145,15 @@ public class Triangle : MonoBehaviour
 
     public void Move()
     {
+        if(position.y == 0)
+        {
+            nextPosition.y = 6;
+        }
         canMove=true;
         moveTimer=0;
         previousPosition = position;
         position = nextPosition;
+
         //transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         moveCount++; // Increment move counter
 
@@ -224,7 +230,7 @@ public class Triangle : MonoBehaviour
     {
         List<Vector2Int> directions = new List<Vector2Int>
         {
-            Vector2Int.up,
+            Vector2Int.zero,
             Vector2Int.down,
             Vector2Int.left,
             Vector2Int.right
@@ -242,6 +248,7 @@ public class Triangle : MonoBehaviour
             }
 
             directions.RemoveAt(index);
+            
         }
 
         return Vector2Int.zero; // Stay in place if no valid moves
@@ -266,6 +273,10 @@ public class Triangle : MonoBehaviour
 
     public void RotateTowardsDirection(Vector2Int direction)
     {
+        if(direction == Vector2.zero)
+        {
+            direction = Vector2Int.down;
+        }
         Vector3 directionVector = new Vector3(direction.x, direction.y, 0);
         transform.up = directionVector;
     }

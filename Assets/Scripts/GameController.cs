@@ -14,7 +14,7 @@ public class GameController : MonoBehaviour
     [SerializeField]private GameObject healthPrefab;
     public BeatTimer beatTimer;
     public GameState currentState;
-    public GameObject[,] grid = new GameObject[6, 6];
+    public GameObject[,] grid = new GameObject[7, 7];
     public GameObject[] health = new GameObject[100];
     public GameObject tilePrefab; // Reference to the tile prefab
     public GameObject trianglePrefab; // Reference to the triangle prefab
@@ -41,7 +41,7 @@ public class GameController : MonoBehaviour
     public GameObject endScreen;
     void Start()
     {
-        CenterCamera();
+        //CenterCamera();
         InitializeGrid();
         StartGame();
         audioSources = GetComponents<AudioSource>();
@@ -57,6 +57,7 @@ public class GameController : MonoBehaviour
         
 
         beatTimer.OnBeat += HandleBeat;
+        //Camera.main.fieldOfView = 100;
     }
 
     private bool canSpawn = true;
@@ -443,14 +444,31 @@ public class GameController : MonoBehaviour
 
     void InitializeGrid()
     {
-        for (int x = 0; x < 6; x++)
+        GameObject parent = Instantiate(tilePrefab, new Vector2(20,20), Quaternion.identity);
+        parent.transform.localScale = new Vector2(tileSize*7,tileSize*7);
+        parent.GetComponent<SpriteRenderer>().sortingOrder = -20;
+        for (int x = 0; x < 7; x++)
         {
-            for (int y = 0; y < 6; y++)
+            for (int y = 0; y < 7; y++)
             {
-                grid[x, y] = Instantiate(tilePrefab, new Vector2(x * tileSize, y * tileSize), Quaternion.identity);
-                grid[x, y].transform.localScale = new Vector3(tileSize, tileSize, 1);
-                grid[x, y].name = $"Tile_{x}_{y}";
-                if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
+                if(y == 0 )
+                {
+                    grid[x, y] = Instantiate(tilePrefab, new Vector2(x * tileSize, y * tileSize+(tileSize/4)), Quaternion.identity);
+                    grid[x, y].transform.localScale = new Vector3(tileSize, tileSize/2, 1);
+                    grid[x, y].name = $"Tile_{x}_{y}";
+                    if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
+                    grid[x,y].transform.parent = parent.transform;
+                }
+
+                else
+                {
+                    grid[x, y] = Instantiate(tilePrefab, new Vector2(x * tileSize, y * tileSize), Quaternion.identity);
+                    grid[x, y].transform.localScale = new Vector3(tileSize, tileSize, 1);
+                    grid[x, y].name = $"Tile_{x}_{y}";
+                    if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
+                    grid[x,y].transform.parent = parent.transform;
+                }
+                
             }
         }
 
@@ -646,24 +664,16 @@ public class GameController : MonoBehaviour
     {
         List<Vector2Int> possiblePositions = new List<Vector2Int>();
         Vector2Int playerPos = player.position;
-        List<Vector2Int> excludedPositions = GetExcludedPositions(playerPos);
+        //List<Vector2Int> excludedPositions = GetExcludedPositions(playerPos);
 
         // Generate positions just outside the grid on all sides, excluding those closest to the player
         for (int y = 0; y < 6; y++)
         {
             Vector2Int abovePosition = new Vector2Int(y, 6); // Above the top row
-            Vector2Int belowPosition = new Vector2Int(y, -1); // Below the bottom row
-            Vector2Int leftPosition = new Vector2Int(-1, y); // Left of the leftmost column
-            Vector2Int rightPosition = new Vector2Int(6, y); // Right of the rightmost column
 
-            if (!occupiedPositions.Contains(abovePosition) && !excludedPositions.Contains(abovePosition))
+            if (!occupiedPositions.Contains(abovePosition))
                 possiblePositions.Add(abovePosition);
-            if (!occupiedPositions.Contains(belowPosition) && !excludedPositions.Contains(belowPosition))
-                possiblePositions.Add(belowPosition);
-            if (!occupiedPositions.Contains(leftPosition) && !excludedPositions.Contains(leftPosition))
-                possiblePositions.Add(leftPosition);
-            if (!occupiedPositions.Contains(rightPosition) && !excludedPositions.Contains(rightPosition))
-                possiblePositions.Add(rightPosition);
+
         }
 
         if (possiblePositions.Count == 0)

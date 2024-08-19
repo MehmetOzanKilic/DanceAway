@@ -22,7 +22,7 @@ public class Player : MonoBehaviour
     void Start()
     {
         gameController = GameObject.Find("GameController").GetComponent<GameController>();
-        position = new Vector2Int(2, 4); // Starting position at the bottom-left tile
+        position = new Vector2Int(3,0); // Starting position at the bottom-left tile
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         audioSource = GetComponent<AudioSource>();
         animator = GetComponent<Animator>();
@@ -67,7 +67,7 @@ public class Player : MonoBehaviour
         if(gameController.enemies.Count > 0)moveCount++;
         float timeToNextBeat = Mathf.Abs(gameController.beatTimer.nextBeatTime - gameController.beatTimer.timer);
 
-        if (!canMove || timeToNextBeat > gameController.beatTimer.beatDivider)
+        if (!canMove || timeToNextBeat > gameController.beatTimer.tolerance*8)
         {
             return; // Ignore movement if not allowed
         }
@@ -99,6 +99,10 @@ public class Player : MonoBehaviour
                 else if (gameController.beatTimer.backGround.color == Color.green)
                 {
                     scoreIncrement = 50; // Red threshold
+                }
+                else
+                {
+                    scoreIncrement = 0;
                 }
 
             }
