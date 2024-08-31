@@ -202,7 +202,6 @@ GameObject:
   - component: {fileID: 519420032}
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
-  - component: {fileID: 519420033}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -284,26 +283,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &519420033
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 519420028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6a160d838ff8b4b4693ac20007e008c7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_AssetsPPU: 1
-  m_RefResolutionX: 64
-  m_RefResolutionY: 64
-  m_UpscaleRT: 1
-  m_PixelSnapping: 0
-  m_CropFrameX: 1
-  m_CropFrameY: 1
-  m_StretchFill: 0
 --- !u!1 &541769763
 GameObject:
   m_ObjectHideFlags: 0
@@ -1717,7 +1696,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a5b79c915b68d143b5328f6e2dedbc4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  State: 0
   filter: {fileID: 1389437353}
+  width: 5
+  height: 5
   waitSeconds: 3
   healthPrefab: {fileID: 4711635891791081157, guid: 3dafdc52eba8d4e40a7851475118109d, type: 3}
   beatTimer: {fileID: 1920807224}
@@ -1824,7 +1806,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   tilePrefab: {fileID: 626526570878754223, guid: 56a248bf72e315e4f8df7f89966eed1d, type: 3}
-  trianglePrefab: {fileID: 628806770080024149, guid: 43645c7ba9cd30d409f244bde6cb343a, type: 3}
+  trianglePrefab: {fileID: 3174134684204338043, guid: dc1b601de13087c43a9d7cd1da786a0e, type: 3}
   spotLightPrefab: {fileID: 7483423840028306526, guid: 5edc494a21043b346bf6d5d00f7233e2, type: 3}
   heartPrefab: {fileID: 3356804048664572338, guid: 2430e3acbcdd0134b8a9ba0582b1c737, type: 3}
   tileSize: 8
@@ -1870,15 +1852,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc9e994638c31a844a1fc4b8e1c9fbd9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  audioMixer: {fileID: 24100000, guid: fbeda4f4386187049a87be15e66bbdac, type: 2}
   beatInterval: 0.6
   nextBeatTime: 1
   backGround: {fileID: 0}
   timer: 0
-  beatDivider: 0.15
+  tolerance: 0.04
+  play: 0
   beatCounter: 0
-  canPlay: 1
-  beatOffset: 0.2
 --- !u!82 &1920807225
 AudioSource:
   m_ObjectHideFlags: 0

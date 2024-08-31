@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
+using System.Collections;
 
 public class Triangle : MonoBehaviour
 {
@@ -40,6 +41,17 @@ public class Triangle : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         speed = gameController.tileSize/(beatTimer.beatInterval/3);
         health = powerLevel * baseHealth;
+        animator = GetComponent<Animator>();
+        childAnimator = transform.GetChild(0).GetComponent<Animator>();
+        animator.Play("Triangle_Idle");
+        
+        if (childAnimator != null)
+        {
+            bool hasState = childAnimator.HasState(0, Animator.StringToHash("Triangle_Damage_Idle"));
+            Debug.Log("Animator has Triangle_Damage_Idle: " + hasState);
+        }
+        childAnimator.Play("Triangle_Damage_Idle");
+
         // Set initial color based on power level
         UpdateColor();
     }
@@ -83,7 +95,7 @@ public class Triangle : MonoBehaviour
 
     public void SetInitialMoves()
     {
-        if (position.y == 6) // Coming from above
+        if (position.y ==  gameController.height) // Coming from above
         {
             initialMoves.Add(Vector2Int.down);
             initialMoves.Add(Vector2Int.down);
@@ -98,16 +110,20 @@ public class Triangle : MonoBehaviour
             initialMoves.Add(Vector2Int.right);
             initialMoves.Add(Vector2Int.right);
         }
-        else if (position.x == 6) // Coming from the right
+        else if (position.x == gameController.width) // Coming from the right
         {
             initialMoves.Add(Vector2Int.left);
             initialMoves.Add(Vector2Int.left);
         }
     }
-
+    public bool flag2D = false;
     public void DecideNextMove()
     {
-        if (isChasingPlayer)
+        if(position.y == 0)
+        {
+            currentDirection = Vector2Int.down;
+        }
+        else if (isChasingPlayer)
         {
             currentDirection = GetDirectionTowardsPlayer();
         }
@@ -118,16 +134,26 @@ public class Triangle : MonoBehaviour
         }
         else
         {
+            if(flag2D)
             currentDirection = GetRandomValidDirection();
+            else
+            currentDirection = GetRandomValidDirection1D();
         }
 
         nextPosition = position + currentDirection;
         RotateTowardsDirection(currentDirection);
     }
 
+    private int chasingNo = 0;
     // New method to get direction towards the player
     private Vector2Int GetDirectionTowardsPlayer()
     {
+        chasingNo++;
+        if(chasingNo%2==0)
+        {
+            return Vector2Int.down;
+        }
+
         Vector2Int playerPos = gameController.player.position;
         Vector2Int direction = Vector2Int.zero;
 
@@ -147,7 +173,7 @@ public class Triangle : MonoBehaviour
     {
         if(position.y == 0)
         {
-            nextPosition.y = 6;
+            nextPosition.y = gameController.height-1;
         }
         canMove=true;
         moveTimer=0;
@@ -165,6 +191,19 @@ public class Triangle : MonoBehaviour
 
         // Play movement sound
         PlayMoveSound();
+        StartCoroutine(ResetAnimation("Triangle_Moving"));
+    }
+
+    private IEnumerator ResetAnimation(string animationName)
+    {
+        // Get the runtime animator controller
+        animator.Play(animationName);
+
+        // Wait until the animation has finished playing
+        yield return new WaitForSeconds(0.45f);
+
+        // Optionally, reset the animation to the default state
+        animator.Play("Triangle_Idle"); // Replace "Idle" with the name of your default animation state
     }
 
     public void MergeTriangles(int numberOfTriangles, int combinedHealth)
@@ -204,21 +243,34 @@ public class Triangle : MonoBehaviour
     public void TakeDamage(int damage)
     {
         health -= damage;
+
+        StartCoroutine(DamageTaken());
         if (health <= 0)
         {
             gameController.RemoveEnemy(this);
             Destroy(gameObject);
         }
     }
+    private Animator animator;
+    private Animator childAnimator;
+    private IEnumerator DamageTaken()
+    {
+        childAnimator.Play("Triangle_Damage");
+
+        yield return new WaitForSeconds(beatTimer.beatInterval/2
+        );
+        
+        childAnimator.Play("Triangle_Damage_Idle");
+    }
 
     private Vector2Int GetRandomDirection()
     {
         List<Vector2Int> validDirections = new List<Vector2Int>();
 
-        if (position.y + 1 < 6) validDirections.Add(Vector2Int.up);
+        if (position.y + 1 < gameController.height-1) validDirections.Add(Vector2Int.up);
         if (position.y - 1 >= 0) validDirections.Add(Vector2Int.down);
         if (position.x - 1 >= 0) validDirections.Add(Vector2Int.left);
-        if (position.x + 1 < 6) validDirections.Add(Vector2Int.right);
+        if (position.x + 1 < gameController.width-1) validDirections.Add(Vector2Int.right);
 
         if (validDirections.Count == 0) return Vector2Int.zero; // Stay in place if no valid moves
 
@@ -230,7 +282,36 @@ public class Triangle : MonoBehaviour
     {
         List<Vector2Int> directions = new List<Vector2Int>
         {
-            Vector2Int.zero,
+            Vector2Int.up,
+            Vector2Int.down,
+            Vector2Int.left,
+            Vector2Int.right
+        };
+
+        while (directions.Count > 0)
+        {
+            int index = Random.Range(0, directions.Count);
+            Vector2Int dir = directions[index];
+            Vector2Int nextPos = position + dir;
+
+            if (IsValidMove(nextPos))
+            {
+                return dir;
+            }
+
+            directions.RemoveAt(index);
+            
+        }
+
+        return Vector2Int.zero; // Stay in place if no valid moves
+    }
+
+    private Vector2Int GetRandomValidDirection1D()
+    {
+        List<Vector2Int> directions = new List<Vector2Int>
+        {
+            Vector2Int.down,
+            Vector2Int.down,
             Vector2Int.down,
             Vector2Int.left,
             Vector2Int.right
@@ -256,7 +337,7 @@ public class Triangle : MonoBehaviour
 
     private bool IsValidMove(Vector2Int nextPosition)
     {
-        if (nextPosition.x < 0 || nextPosition.x >= 6 || nextPosition.y < 0 || nextPosition.y >= 6)
+        if (nextPosition.x < 0 || nextPosition.x >= gameController.width || nextPosition.y < 0 || nextPosition.y >= gameController.height)
         {
             return false; // Out of bounds
         }

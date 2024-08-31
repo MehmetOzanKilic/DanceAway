@@ -13,8 +13,9 @@ GameObject:
   - component: {fileID: 6868799077743233430}
   - component: {fileID: 206579237812216555}
   - component: {fileID: 1101784537709831713}
+  - component: {fileID: -21094327138382512}
   m_Layer: 0
-  m_Name: Triangle
+  m_Name: Triangle_Old
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -113,6 +114,7 @@ MonoBehaviour:
   spotlightPrefab: {fileID: 7483423840028306526, guid: 5edc494a21043b346bf6d5d00f7233e2, type: 3}
   health: 0
   isChasingPlayer: 0
+  flag2D: 0
 --- !u!50 &206579237812216555
 Rigidbody2D:
   serializedVersion: 4
@@ -155,6 +157,27 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 0.5}
   m_EffectDistance: {x: 3, y: 3}
   m_UseGraphicAlpha: 1
+--- !u!95 &-21094327138382512
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 628806770080024149}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 62ce8d16d95b73c4da4fbc9ccf534139, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &8393833854181663008
 GameObject:
   m_ObjectHideFlags: 0

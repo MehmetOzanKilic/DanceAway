@@ -179,10 +179,10 @@ public class SpotlightSquare: MonoBehaviour
     {
         List<Vector2Int> validDirections = new List<Vector2Int>();
 
-        if (position.y + 1 < 6) validDirections.Add(Vector2Int.up);
+        if (position.y + 1 < gameController.height-1) validDirections.Add(Vector2Int.up);
         if (position.y - 1 >= 0) validDirections.Add(Vector2Int.down);
         if (position.x - 1 >= 0) validDirections.Add(Vector2Int.left);
-        if (position.x + 1 < 6) validDirections.Add(Vector2Int.right);
+        if (position.x + 1 < gameController.width-1) validDirections.Add(Vector2Int.right);
 
         if (validDirections.Count == 0) return Vector2Int.zero; // Stay in place if no valid moves
 
@@ -219,7 +219,7 @@ public class SpotlightSquare: MonoBehaviour
 
     private bool IsValidMove(Vector2Int nextPosition)
     {
-        if (nextPosition.x < 0 || nextPosition.x >= 6 || nextPosition.y < 0 || nextPosition.y >= 6)
+        if (nextPosition.x < 0 || nextPosition.x >= gameController.width || nextPosition.y < 0 || nextPosition.y >= gameController.height)
         {
             return false; // Out of bounds
         }

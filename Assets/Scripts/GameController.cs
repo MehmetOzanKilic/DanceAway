@@ -1,20 +1,38 @@
 using System.Collections;
 using System.Collections.Generic;
+using Common.Enums;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+namespace Common.Enums
+{
+    public enum BeatState
+    {
+        PerfectBeat,
+        CloseBeat,
+        MiddleBeat,
+        FarBeat,
+        OffBeat
+    }
+}
+
+
 public class GameController : MonoBehaviour
 {
+    
+    public BeatState State;
     [SerializeField]private GameObject filter;
+    [SerializeField]public int width=5;
+    [SerializeField]public int height=5; 
     private SpriteRenderer filterSR;
     public int waitSeconds=1;
     AudioSource[] audioSources;  
     [SerializeField]private GameObject healthPrefab;
     public BeatTimer beatTimer;
     public GameState currentState;
-    public GameObject[,] grid = new GameObject[7, 7];
+    public GameObject[,] grid;
     public GameObject[] health = new GameObject[100];
     public GameObject tilePrefab; // Reference to the tile prefab
     public GameObject trianglePrefab; // Reference to the triangle prefab
@@ -37,10 +55,12 @@ public class GameController : MonoBehaviour
     [SerializeField]private int levelNo=1;
     [SerializeField]private float spawnChance = 0.4f;
     private float change;
+    [SerializeField]private CrowdController crowdController;
 
     public GameObject endScreen;
     void Start()
     {
+        grid = new GameObject[width, height];
         //CenterCamera();
         InitializeGrid();
         StartGame();
@@ -54,6 +74,7 @@ public class GameController : MonoBehaviour
         filterSR = filter.GetComponent<SpriteRenderer>();
         change = Random.Range(0, 360);
         endScreen.SetActive(false);
+        crowdController.Initialize(beatTimer);
         
 
         beatTimer.OnBeat += HandleBeat;
@@ -83,7 +104,7 @@ public class GameController : MonoBehaviour
 
         if(enemies.Count == 0 && !isSpawningEnemies)
         {
-            LoadLevel();
+            beatTimer.LoadLevelFlag();
         }
 
         HandleMerging();
@@ -110,9 +131,11 @@ public class GameController : MonoBehaviour
     }
 
 
-    public int avarage=200;
+    public int avarage;
     public void PlayHand()
     {   
+        avarage = 200;
+        print("avarage: " + avarage);
         if(avarage<75)
         {
             audioSources[1].Stop();
@@ -123,7 +146,7 @@ public class GameController : MonoBehaviour
         }
         if(avarage>=75)
         {
-            audioSources[1].volume = 0.1f;
+            audioSources[1].volume = 0.3f;
             audioSources[1].Play();
         }
         if(avarage>=125)
@@ -155,7 +178,7 @@ public class GameController : MonoBehaviour
     }
 
     private bool flag5=true;
-    private void LoadLevel()
+    public void LoadLevel()
     {
         if(((levelNo+1)%5)==0 && flag5)
         {   
@@ -179,8 +202,8 @@ public class GameController : MonoBehaviour
     {
         canSpawn=false;
         OpenLevelText();
-        yield return new WaitForSeconds(waitSeconds);
         StopMusic();
+        yield return new WaitForSeconds(waitSeconds/3);
         ChangePitch();
         CloseLevelText();
         StartMusic();
@@ -190,14 +213,13 @@ public class GameController : MonoBehaviour
 
     private void StartMusic()
     {
-        beatTimer.canPlay=true;
+        beatTimer.beatCounter=0;
+        beatTimer.play=true;
     }
 
     private void StopMusic()
     {
-        beatTimer.beatCounter=0;
-        beatTimer.canPlay=false;
-        for (int i = 1; i < 6; i++)
+        for (int i = 0; i < 6; i++)
         {
             audioSources[i].Stop();
         }
@@ -285,9 +307,9 @@ public class GameController : MonoBehaviour
 
     void SwitchColor()
     {
-        for(int x = 0; x<6; x++)
+        for(int x = 0; x<width-1; x++)
         {
-            for (int y = 0; y<6; y++)
+            for (int y = 0; y<height-1; y++)
             {
                 grid[x,y].GetComponent<SpriteRenderer>().color =  GetRandomColor();
             }
@@ -437,19 +459,19 @@ public class GameController : MonoBehaviour
 
     void CenterCamera()
     {
-        float centerX = (6 * tileSize - tileSize) / 2.0f;
-        float centerY = (6 * tileSize - tileSize) / 2.0f;
+        float centerX = ((width-1) * tileSize - tileSize) / 2.0f;
+        float centerY = ((height-1) * tileSize - tileSize) / 2.0f;
         Camera.main.transform.position = new Vector3(centerX, centerY, Camera.main.transform.position.z);
     }
 
     void InitializeGrid()
     {
         GameObject parent = Instantiate(tilePrefab, new Vector2(20,20), Quaternion.identity);
-        parent.transform.localScale = new Vector2(tileSize*7,tileSize*7);
+        parent.transform.localScale = new Vector2(tileSize*width,tileSize*height);
         parent.GetComponent<SpriteRenderer>().sortingOrder = -20;
-        for (int x = 0; x < 7; x++)
+        for (int x = 0; x < width; x++)
         {
-            for (int y = 0; y < 7; y++)
+            for (int y = 0; y < height; y++)
             {
                 if(y == 0 )
                 {
@@ -667,9 +689,9 @@ public class GameController : MonoBehaviour
         //List<Vector2Int> excludedPositions = GetExcludedPositions(playerPos);
 
         // Generate positions just outside the grid on all sides, excluding those closest to the player
-        for (int y = 0; y < 6; y++)
+        for (int y = 0; y < height; y++)
         {
-            Vector2Int abovePosition = new Vector2Int(y, 6); // Above the top row
+            Vector2Int abovePosition = new Vector2Int(y, width); // Above the top row
 
             if (!occupiedPositions.Contains(abovePosition))
                 possiblePositions.Add(abovePosition);

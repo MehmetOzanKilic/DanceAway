@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using Common.Enums;
 
 public class Player : MonoBehaviour
 {
@@ -12,16 +13,19 @@ public class Player : MonoBehaviour
     public Vector2Int position;
     public Vector2Int prePosition;
     public GameController gameController; // Reference to GameController
+    private BeatTimer beatTimer;
     public AudioClip moveSound; // Sound to play when the player moves
     public AudioClip hitSound; // Sound to play when the player gets hit
     private AudioSource audioSource;
     private bool canMove = false; // Tracks if the player can move
     private Animator animator;
     private Rigidbody2D rb;
+    public BeatState State { get; set; }
 
     void Start()
     {
         gameController = GameObject.Find("GameController").GetComponent<GameController>();
+        beatTimer = GameObject.Find("GameController").GetComponent<BeatTimer>();
         position = new Vector2Int(3,0); // Starting position at the bottom-left tile
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         audioSource = GetComponent<AudioSource>();
@@ -31,13 +35,13 @@ public class Player : MonoBehaviour
         health = maxHealth;
 
         // Subscribe to the CanMove event from the BeatTimer
-        gameController.beatTimer.CanMove += AllowMovement;
+        beatTimer.CanMove += AllowMovement;
     }
 
     private float moveTimer=0f;
     void FixedUpdate()
     {
-        if (moveTimer >= gameController.beatTimer.beatInterval/3 && canMove)
+        if (moveTimer >= beatTimer.beatInterval/3 && canMove)
         {
             transform.position=new Vector3(position.x*gameController.tileSize,position.y*gameController.tileSize,0);
             moveTimer=0;
@@ -49,7 +53,7 @@ public class Player : MonoBehaviour
     void OnDestroy()
     {
         // Unsubscribe from the CanMove event to prevent memory leaks
-        gameController.beatTimer.CanMove -= AllowMovement;
+        beatTimer.CanMove -= AllowMovement;
     }
 
     void AllowMovement()
@@ -64,39 +68,38 @@ public class Player : MonoBehaviour
     public int moveAllowed=1;
     public void Move(Vector2Int direction)
     {
-        if(gameController.enemies.Count > 0)moveCount++;
-        float timeToNextBeat = Mathf.Abs(gameController.beatTimer.nextBeatTime - gameController.beatTimer.timer);
+        State = beatTimer.State;
+        print(State);
 
-        if (!canMove || timeToNextBeat > gameController.beatTimer.tolerance*8)
+        if (beatTimer.State == BeatState.OffBeat)
         {
             return; // Ignore movement if not allowed
         }
 
         canMove = false; // Disallow further movement until the next beat
 
-
+        if(gameController.enemies.Count > 0)moveCount++;
         newPosition = position + direction;
 
         // Check if the new position is within the grid bounds
-        if (newPosition.x >= 0 && newPosition.x < 6 && newPosition.y >= 0 && newPosition.y < 6)
+        if (newPosition.x >= 0 && newPosition.x < gameController.width && newPosition.y >= 0 && newPosition.y < gameController.height)
         {
             int scoreIncrement = 0;
             if(gameController.enemies.Count > 0)
             {
-                print(moveCount);
-                if (gameController.beatTimer.backGround.color == Color.black)
+                if (State == BeatState.PerfectBeat)
                 {
                     scoreIncrement = 200; // Black threshold
                 }
-                else if (gameController.beatTimer.backGround.color == Color.red)
+                else if (State == BeatState.CloseBeat)
                 {
                     scoreIncrement = 150; // Red threshold
                 }
-                else if (gameController.beatTimer.backGround.color == Color.blue)
+                else if (State == BeatState.MiddleBeat)
                 {
                     scoreIncrement = 100; // Red threshold
                 }
-                else if (gameController.beatTimer.backGround.color == Color.green)
+                else if (State == BeatState.FarBeat)
                 {
                     scoreIncrement = 50; // Red threshold
                 }
@@ -115,7 +118,9 @@ public class Player : MonoBehaviour
             PlayMoveSound();
 
             // Hit the closest triangle(s)
-            HitClosestTriangles(scoreIncrement);
+            //HitClosestTriangles(scoreIncrement);
+            //HitStrongestTriangles(scoreIncrement);
+            HitStrongestTriangle(scoreIncrement);
 
             // Check if the player lands on a triangle
             CheckPlayerCollision();
@@ -123,7 +128,7 @@ public class Player : MonoBehaviour
             // Check if the player is on the same tile as a spotlight
             CheckSpotlightCollision();
 
-            print(mult + "  " + scoreIncrement);
+            //(mult + "  " + scoreIncrement);
             score += scoreIncrement*mult;
             scoreText.text = score.ToString();
             gameController.avarage = score/moveCount;
@@ -132,11 +137,6 @@ public class Player : MonoBehaviour
         }
 
         StartCoroutine(ResetAnimation("Player_Moving"));
-    }
-
-    private void PlayHand()
-    {
-        gameController.PlayHand();
     }
 
     private IEnumerator ResetAnimation(string animationName)
@@ -172,6 +172,50 @@ public class Player : MonoBehaviour
             triangle.TakeDamage(damage);
         }
     }
+
+    private void HitStrongestTriangles(int damage)
+    {
+        if (gameController.enemies.Count == 0)
+        {
+            return; // No enemies to hit
+        }
+
+        // Calculate the maximum power level among all triangles
+        int maxPower = gameController.enemies.Max(t => t.powerLevel);
+
+        // Find all triangles with the maximum power level
+        var strongestTriangles = gameController.enemies
+            .Where(t => t.powerLevel == maxPower)
+            .ToList();
+
+        // Deal damage to the triangles with the highest power level
+        foreach (var triangle in strongestTriangles)
+        {
+            triangle.TakeDamage(damage);
+        }
+    }
+    private void HitStrongestTriangle(int damage)
+    {
+        if (gameController.enemies.Count == 0)
+        {
+            return; // No enemies to hit
+        }
+
+        // Calculate the maximum power level among all triangles
+        int maxPower = gameController.enemies.Max(t => t.powerLevel);
+
+        // Find the first triangle with the maximum power level
+        var strongestTriangle = gameController.enemies
+            .FirstOrDefault(t => t.powerLevel == maxPower);
+
+        // If a triangle is found, deal damage to it
+        if (strongestTriangle != null)
+        {
+            strongestTriangle.TakeDamage(damage);
+        }
+    }
+
+
 
     private void CheckPlayerCollision()
     {
@@ -232,7 +276,7 @@ public class Player : MonoBehaviour
         canMove = false;
         takingDamage = true;
 
-        yield return new WaitForSeconds(gameController.beatTimer.beatInterval);
+        yield return new WaitForSeconds(beatTimer.beatInterval);
 
         animator.Play("idle");
         takingDamage=false;
