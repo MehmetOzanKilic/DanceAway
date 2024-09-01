@@ -5,7 +5,9 @@ using UnityEngine;
 public class cTriangle : MonoBehaviour
 {
     public BeatTimer beatTimer;
+    private Animator animator;
     public float tRotation;
+
     // Start is called before the first frame update
 
     void Start()
@@ -17,6 +19,8 @@ public class cTriangle : MonoBehaviour
         this.beatTimer = beatTimer;
         beatTimer.OnBeat += Nodding;
         transform.position = new Vector3(randomX, randomY, 0);
+        animator = GetComponent<Animator>();
+        animator.Play("cTriangle_Idle");
     }
 
     // Update is called once per frame
@@ -32,11 +36,11 @@ public class cTriangle : MonoBehaviour
 
     private IEnumerator Nod()
     {   
-        transform.eulerAngles = new Vector3(0f, tRotation,-15f);
+        animator.Play("cTriangle_Nod");
 
-        yield return new WaitForSeconds(beatTimer.beatInterval/2);
+        yield return new WaitForSeconds(animator.GetCurrentAnimatorClipInfo(0).Length);
 
-        transform.eulerAngles = new Vector3(0f, tRotation, 0f);
+        animator.Play("cTriangle_Idle");
     }
 
 }
