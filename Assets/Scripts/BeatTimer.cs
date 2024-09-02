@@ -5,6 +5,8 @@ using Common.Enums;
 
 public class BeatTimer : MonoBehaviour
 {   
+    [Range(0,1)]
+    [SerializeField]private float timeS;
     private GameController gameController;
     public float beatInterval = 0.6f; // Time between beats in seconds
     public float nextBeatTime;
@@ -35,8 +37,10 @@ public class BeatTimer : MonoBehaviour
         play=true;
         handPlay=true;
     }
+
     void FixedUpdate()
     {   
+        if(timeS!=1)Time.timeScale=1*timeS;
         CheckAction();
         timer += Time.deltaTime;
     }
@@ -86,17 +90,12 @@ public class BeatTimer : MonoBehaviour
             {
                 if(beatCounter%16==0)
                 {
-                handPlay=true;
+                    PlayHand();
                 }
                 if(play)
                 {
                     PlayBack();
                     play=false;
-                }
-                if(handPlay)
-                {
-                    PlayHand();
-                    handPlay=false;
                 }
             }
             backGround.color = Color.yellow; // Farthest in the close range
@@ -121,7 +120,7 @@ public class BeatTimer : MonoBehaviour
             {
                 OnBeat?.Invoke();
                 beatCounter++;
-                print(beatCounter);
+                //print(beatCounter);
                 beatFlag=false;
             }
         }       

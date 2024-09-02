@@ -14,13 +14,15 @@ public class cTriangle : MonoBehaviour
     {
 
     }
-    public void Initialize(BeatTimer beatTimer,float randomX,float randomY)
+    public void Initialize(BeatTimer beatTimerRef)
     {
-        this.beatTimer = beatTimer;
+        beatTimer = beatTimerRef;
+        if(beatTimer == null)print("nonono");
         beatTimer.OnBeat += Nodding;
-        transform.position = new Vector3(randomX, randomY, 0);
+        //transform.position = new Vector3(xPos, yPos, 0);
         animator = GetComponent<Animator>();
-        animator.Play("cTriangle_Idle");
+        float random = Random.Range(0,5);
+        Invoke("StartNotVibing",random);
     }
 
     // Update is called once per frame
@@ -29,9 +31,15 @@ public class cTriangle : MonoBehaviour
         
     }
 
+    private void StartNotVibing()
+    {
+        animator.Play("cTriangle_notVibing");
+    }
+
+    public bool canNod=false;
     private void Nodding()
     {
-        StartCoroutine(Nod());
+        if(canNod)StartCoroutine(Nod());
     }
 
     private IEnumerator Nod()

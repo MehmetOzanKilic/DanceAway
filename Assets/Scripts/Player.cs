@@ -26,7 +26,7 @@ public class Player : MonoBehaviour
     {
         gameController = GameObject.Find("GameController").GetComponent<GameController>();
         beatTimer = GameObject.Find("GameController").GetComponent<BeatTimer>();
-        position = new Vector2Int(3,0); // Starting position at the bottom-left tile
+        position = new Vector2Int(((gameController.width+1)/2)-1,0); // Starting position at the bottom-left tile
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         audioSource = GetComponent<AudioSource>();
         animator = GetComponent<Animator>();
@@ -43,7 +43,7 @@ public class Player : MonoBehaviour
     {
         if (moveTimer >= beatTimer.beatInterval/3 && canMove)
         {
-            transform.position=new Vector3(position.x*gameController.tileSize,position.y*gameController.tileSize,0);
+            transform.position = new Vector3(newPosition.x,newPosition.y,0);
             moveTimer=0;
         }
 
@@ -69,17 +69,18 @@ public class Player : MonoBehaviour
     public void Move(Vector2Int direction)
     {
         State = beatTimer.State;
+        bool validMove=true;
         print(State);
 
-        if (beatTimer.State == BeatState.OffBeat)
+        if (State == BeatState.OffBeat)
         {
-            return; // Ignore movement if not allowed
+            validMove=false; // Ignore movement if not allowed
         }
 
         canMove = false; // Disallow further movement until the next beat
 
         if(gameController.enemies.Count > 0)moveCount++;
-        newPosition = position + direction;
+        if(validMove)newPosition = position + direction;//???????? 
 
         // Check if the new position is within the grid bounds
         if (newPosition.x >= 0 && newPosition.x < gameController.width && newPosition.y >= 0 && newPosition.y < gameController.height)
@@ -103,6 +104,10 @@ public class Player : MonoBehaviour
                 {
                     scoreIncrement = 50; // Red threshold
                 }
+                else if (State == BeatState.OffBeat)
+                {
+                    scoreIncrement=-200;
+                }
                 else
                 {
                     scoreIncrement = 0;
@@ -110,10 +115,15 @@ public class Player : MonoBehaviour
 
             }
             // Update player's position
-            prePosition = position;
-            position = newPosition;
-            rb.AddForce(direction*2000);
-        
+            
+            if(validMove)
+            {
+                newPosition = position + direction;
+                prePosition = position;
+                position = newPosition;
+                rb.AddForce(direction*1600);
+            }//???????? 
+
             // Play movement sound
             PlayMoveSound();
 
@@ -129,7 +139,8 @@ public class Player : MonoBehaviour
             CheckSpotlightCollision();
 
             //(mult + "  " + scoreIncrement);
-            score += scoreIncrement*mult;
+            if(validMove)score += scoreIncrement*mult;
+            else score += scoreIncrement;
             scoreText.text = score.ToString();
             gameController.avarage = score/moveCount;
 
@@ -264,8 +275,8 @@ public class Player : MonoBehaviour
 
         for (int i = 0; i < 46; i++)
         {
-            if(i>number)gameController.health[i].SetActive(false);
-            else if (i<=number)gameController.health[i].SetActive(true);
+            //if(i>number)gameController.health[i].SetActive(false);
+            //else if (i<=number)gameController.health[i].SetActive(true);
         }
     }
 

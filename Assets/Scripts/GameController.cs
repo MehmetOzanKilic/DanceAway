@@ -38,7 +38,7 @@ public class GameController : MonoBehaviour
     public GameObject trianglePrefab; // Reference to the triangle prefab
     public GameObject spotLightPrefab;
     public GameObject heartPrefab;
-    public float tileSize = 5.0f;
+    public float tileSize = 8.0f;
     public Player player;
     public List<Triangle> enemies = new List<Triangle>();
     public List<SpotlightSquare> spotlights = new List<SpotlightSquare>();
@@ -61,7 +61,7 @@ public class GameController : MonoBehaviour
     void Start()
     {
         grid = new GameObject[width, height];
-        //CenterCamera();
+        CenterCamera();
         InitializeGrid();
         StartGame();
         audioSources = GetComponents<AudioSource>();
@@ -74,7 +74,7 @@ public class GameController : MonoBehaviour
         filterSR = filter.GetComponent<SpriteRenderer>();
         change = Random.Range(0, 360);
         endScreen.SetActive(false);
-        crowdController.Initialize(beatTimer);
+        crowdController.Initialize(beatTimer,width,height,tileSize);
         
 
         beatTimer.OnBeat += HandleBeat;
@@ -134,25 +134,28 @@ public class GameController : MonoBehaviour
     public int avarage;
     public void PlayHand()
     {   
-        avarage = 200;
+        //avarage = 200;
         print("avarage: " + avarage);
-        if(avarage<75)
+        if(avarage<100)
         {
             audioSources[1].Stop();
+            crowdController.LessNodders(20);
         }
-        if(avarage<125)
+        if(avarage<150)
         {
             audioSources[2].Stop();
         }
-        if(avarage>=75)
+        if(avarage>=100)
         {
             audioSources[1].volume = 0.3f;
             audioSources[1].Play();
+            crowdController.MoreNodders(10);
         }
-        if(avarage>=125)
+        if(avarage>=150)
         {
             audioSources[2].volume = 0.3f;
             audioSources[2].Play();
+            crowdController.MoreNodders(20);
         }
         
         if(levelNo>=30)
@@ -459,8 +462,8 @@ public class GameController : MonoBehaviour
 
     void CenterCamera()
     {
-        float centerX = ((width-1) * tileSize - tileSize) / 2.0f;
-        float centerY = ((height-1) * tileSize - tileSize) / 2.0f;
+        float centerX = (width * tileSize - tileSize) / 2.0f;
+        float centerY = (height * tileSize - tileSize) / 2.0f;
         Camera.main.transform.position = new Vector3(centerX, centerY, Camera.main.transform.position.z);
     }
 
@@ -473,33 +476,30 @@ public class GameController : MonoBehaviour
         {
             for (int y = 0; y < height; y++)
             {
-                if(y == 0 )
+                /*if(y == 0 )
                 {
                     grid[x, y] = Instantiate(tilePrefab, new Vector2(x * tileSize, y * tileSize+(tileSize/4)), Quaternion.identity);
                     grid[x, y].transform.localScale = new Vector3(tileSize, tileSize/2, 1);
                     grid[x, y].name = $"Tile_{x}_{y}";
                     if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
                     grid[x,y].transform.parent = parent.transform;
-                }
+                }*///Used to make the small tiles of the player for the 1D mode. Probably not necessary.
 
-                else
-                {
-                    grid[x, y] = Instantiate(tilePrefab, new Vector2(x * tileSize, y * tileSize), Quaternion.identity);
-                    grid[x, y].transform.localScale = new Vector3(tileSize, tileSize, 1);
-                    grid[x, y].name = $"Tile_{x}_{y}";
-                    if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
-                    grid[x,y].transform.parent = parent.transform;
-                }
+                grid[x, y] = Instantiate(tilePrefab, new Vector2(x * tileSize, y * tileSize), Quaternion.identity);
+                grid[x, y].transform.localScale = new Vector3(tileSize, tileSize, 1);
+                grid[x, y].name = $"Tile_{x}_{y}";
+                if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
+                grid[x,y].transform.parent = parent.transform;
                 
             }
         }
 
-        for(int i = 0; i<46; i++)
+        /*for(int i = 0; i<46; i++)
         {
             health[i] = Instantiate(healthPrefab, new Vector2(-6, -2.5f+(i*1)), Quaternion.identity);
             health[i].transform.Rotate(0,0,90);
             health[i].transform.localScale = new Vector3(1.2f,1.2f,1);
-        }
+        }*///older version of the helath bar.
     }
 
     void StartGame()
