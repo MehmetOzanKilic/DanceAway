@@ -116,7 +116,7 @@ public class Triangle : MonoBehaviour
             initialMoves.Add(Vector2Int.left);
         }
     }
-    public bool flag2D = false;
+    public bool flag2D = true;
     public void DecideNextMove()
     {
         if(position.y == 0)

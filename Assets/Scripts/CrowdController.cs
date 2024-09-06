@@ -10,8 +10,7 @@ public class CrowdController : MonoBehaviour
     [SerializeField]private float distribution;
     [SerializeField]private int xOffset;
     [SerializeField]private int yOffset;
-    [SerializeField]private int xLenght;
-    [SerializeField]private int yLenght;
+
     private int width;
     private int height;
     private float tileSize;
@@ -36,8 +35,8 @@ public class CrowdController : MonoBehaviour
 
     private void SpawnCrowd(BeatTimer beatTimer,int width,int height, float tileSize)
     {
-        xLenght = (int)(width*tileSize);
-        yLenght = (int)(height*tileSize) + 5;
+        int xLenght = (int)(width*tileSize)/4;
+        int yLenght = (int)(height*tileSize) + 5;
 
         for (int i = 0; i < xLenght/xOffset; i++)
         {

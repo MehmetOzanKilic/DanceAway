@@ -21,13 +21,15 @@ public class Player : MonoBehaviour
     private Animator animator;
     private Rigidbody2D rb;
     public BeatState State { get; set; }
+    private float tileSize;
 
     void Start()
     {
         gameController = GameObject.Find("GameController").GetComponent<GameController>();
+        tileSize = gameController.tileSize;
         beatTimer = GameObject.Find("GameController").GetComponent<BeatTimer>();
         position = new Vector2Int(((gameController.width+1)/2)-1,0); // Starting position at the bottom-left tile
-        transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
+        transform.position = new Vector2(position.x * tileSize, position.y * tileSize);
         audioSource = GetComponent<AudioSource>();
         animator = GetComponent<Animator>();
         animator.Play("idle");
@@ -38,16 +40,9 @@ public class Player : MonoBehaviour
         beatTimer.CanMove += AllowMovement;
     }
 
-    private float moveTimer=0f;
     void FixedUpdate()
     {
-        if (moveTimer >= beatTimer.beatInterval/3 && canMove)
-        {
-            transform.position = new Vector3(newPosition.x,newPosition.y,0);
-            moveTimer=0;
-        }
 
-        moveTimer += Time.deltaTime;
     }
 
     void OnDestroy()
@@ -80,8 +75,8 @@ public class Player : MonoBehaviour
         canMove = false; // Disallow further movement until the next beat
 
         if(gameController.enemies.Count > 0)moveCount++;
-        if(validMove)newPosition = position + direction;//???????? 
 
+        if(validMove)newPosition = position + direction;
         // Check if the new position is within the grid bounds
         if (newPosition.x >= 0 && newPosition.x < gameController.width && newPosition.y >= 0 && newPosition.y < gameController.height)
         {
@@ -107,6 +102,8 @@ public class Player : MonoBehaviour
                 else if (State == BeatState.OffBeat)
                 {
                     scoreIncrement=-200;
+                    gameController.LessNodders();
+                    StartCoroutine(WrongMove(direction));
                 }
                 else
                 {
@@ -118,10 +115,10 @@ public class Player : MonoBehaviour
             
             if(validMove)
             {
-                newPosition = position + direction;
                 prePosition = position;
                 position = newPosition;
-                rb.AddForce(direction*1600);
+                rb.AddForce(direction*(int)(200*tileSize));
+                Invoke("Snap", beatTimer.beatInterval/3);
             }//???????? 
 
             // Play movement sound
@@ -142,12 +139,31 @@ public class Player : MonoBehaviour
             if(validMove)score += scoreIncrement*mult;
             else score += scoreIncrement;
             scoreText.text = score.ToString();
-            gameController.avarage = score/moveCount;
+            gameController.avarage = score/((moveCount%16)+1);
 
             gameController.CheckPlayerHeartCollision();
         }
 
+        else
+        {
+            StartCoroutine(WrongMove(direction));
+        }
+
         StartCoroutine(ResetAnimation("Player_Moving"));
+    }
+
+    private IEnumerator WrongMove(Vector2 direction)
+    {
+        rb.AddForce(direction*(int)(200*tileSize));
+
+        yield return new WaitForSeconds(beatTimer.beatInterval/4);
+
+        rb.AddForce(-direction*(int)(200*tileSize));
+    }
+
+    private void Snap()
+    {
+        //
     }
 
     private IEnumerator ResetAnimation(string animationName)

@@ -139,7 +139,6 @@ public class GameController : MonoBehaviour
         if(avarage<100)
         {
             audioSources[1].Stop();
-            crowdController.LessNodders(20);
         }
         if(avarage<150)
         {
@@ -173,6 +172,11 @@ public class GameController : MonoBehaviour
             audioSources[3].volume = 0.3f;
             audioSources[3].Play();
         } 
+    }
+
+    public void LessNodders()
+    {
+        crowdController.LessNodders(10);
     }
 
     public void PlayBack()
@@ -464,7 +468,14 @@ public class GameController : MonoBehaviour
     {
         float centerX = (width * tileSize - tileSize) / 2.0f;
         float centerY = (height * tileSize - tileSize) / 2.0f;
-        Camera.main.transform.position = new Vector3(centerX, centerY, Camera.main.transform.position.z);
+
+        float yScreenPosition = Screen.height * 0.35f;
+        Vector3 worldPosition = Camera.main.ScreenToWorldPoint(new Vector3(0, yScreenPosition, Camera.main.nearClipPlane));
+
+        Camera.main.transform.position = new Vector3(centerX, worldPosition.y, Camera.main.transform.position.z);
+        float screenAspect = (float)Screen.width / (float)Screen.height;
+        float arenaWidth = width*height;
+        Camera.main.orthographicSize = arenaWidth / (1.2f * screenAspect);
     }
 
     void InitializeGrid()
@@ -686,16 +697,33 @@ public class GameController : MonoBehaviour
     {
         List<Vector2Int> possiblePositions = new List<Vector2Int>();
         Vector2Int playerPos = player.position;
-        //List<Vector2Int> excludedPositions = GetExcludedPositions(playerPos);
 
-        // Generate positions just outside the grid on all sides, excluding those closest to the player
+        // Generate positions outside the grid, excluding the bottom side
         for (int y = 0; y < height; y++)
         {
-            Vector2Int abovePosition = new Vector2Int(y, width); // Above the top row
+            if (playerPos.x != 0)
+            {
+                Vector2Int leftPosition = new Vector2Int(-1, y); // Left side
+                if (!occupiedPositions.Contains(leftPosition))
+                    possiblePositions.Add(leftPosition);
+            }
 
-            if (!occupiedPositions.Contains(abovePosition))
-                possiblePositions.Add(abovePosition);
+            if (playerPos.x != width - 1)
+            {
+                Vector2Int rightPosition = new Vector2Int(width, y); // Right side
+                if (!occupiedPositions.Contains(rightPosition))
+                    possiblePositions.Add(rightPosition);
+            }
+        }
 
+        for (int x = 0; x < width; x++)
+        {
+            if (playerPos.y != height - 1)
+            {
+                Vector2Int topPosition = new Vector2Int(x, height); // Top side
+                if (!occupiedPositions.Contains(topPosition))
+                    possiblePositions.Add(topPosition);
+            }
         }
 
         if (possiblePositions.Count == 0)
