@@ -11,33 +11,26 @@ public class Player : MonoBehaviour
     private int maxHealth=100;
     public int health; // Player starting health
     public Vector2Int position;
-    public Vector2Int prePosition;
-    public GameController gameController; // Reference to GameController
+    private GameController gameController; // Reference to GameController
     private BeatTimer beatTimer;
-    public AudioClip moveSound; // Sound to play when the player moves
-    public AudioClip hitSound; // Sound to play when the player gets hit
-    private AudioSource audioSource;
-    private bool canMove = false; // Tracks if the player can move
     private Animator animator;
     private Rigidbody2D rb;
     public BeatState State { get; set; }
     private float tileSize;
+    public LayerMask spotlightLayer;
 
     void Start()
     {
         gameController = GameObject.Find("GameController").GetComponent<GameController>();
         tileSize = gameController.tileSize;
         beatTimer = GameObject.Find("GameController").GetComponent<BeatTimer>();
-        position = new Vector2Int(((gameController.width+1)/2)-1,0); // Starting position at the bottom-left tile
+        position = new Vector2Int(((gameController.width+1)/2)-1,0); // Starting position at the bottom-middle tile
         transform.position = new Vector2(position.x * tileSize, position.y * tileSize);
-        audioSource = GetComponent<AudioSource>();
         animator = GetComponent<Animator>();
         animator.Play("idle");
         rb = GetComponent<Rigidbody2D>();
         health = maxHealth;
 
-        // Subscribe to the CanMove event from the BeatTimer
-        beatTimer.CanMove += AllowMovement;
     }
 
     void FixedUpdate()
@@ -45,35 +38,25 @@ public class Player : MonoBehaviour
 
     }
 
-    void OnDestroy()
-    {
-        // Unsubscribe from the CanMove event to prevent memory leaks
-        beatTimer.CanMove -= AllowMovement;
-    }
 
-    void AllowMovement()
-    {
-        canMove = true;
-    }
     private Vector2Int newPosition;
     private int moveCount=0;  
-    private int avarage=0;
     [SerializeField]private Text scoreText;
 
     public int moveAllowed=1;
+    private int mult;
     public void Move(Vector2Int direction)
     {
         State = beatTimer.State;
+
         bool validMove=true;
-        print(State);
 
         if (State == BeatState.OffBeat)
         {
             validMove=false; // Ignore movement if not allowed
         }
 
-        canMove = false; // Disallow further movement until the next beat
-
+        // Only count moves if there are enemies.
         if(gameController.enemies.Count > 0)moveCount++;
 
         if(validMove)newPosition = position + direction;
@@ -81,6 +64,7 @@ public class Player : MonoBehaviour
         if (newPosition.x >= 0 && newPosition.x < gameController.width && newPosition.y >= 0 && newPosition.y < gameController.height)
         {
             int scoreIncrement = 0;
+            CheckForSpotlightCollision();
             if(gameController.enemies.Count > 0)
             {
                 if (State == BeatState.PerfectBeat)
@@ -115,33 +99,19 @@ public class Player : MonoBehaviour
             
             if(validMove)
             {
-                prePosition = position;
                 position = newPosition;
                 rb.AddForce(direction*(int)(200*tileSize));
-                Invoke("Snap", beatTimer.beatInterval/3);
             }//???????? 
 
-            // Play movement sound
-            PlayMoveSound();
+            HitStrongestTriangle(scoreIncrement*mult);
 
-            // Hit the closest triangle(s)
-            //HitClosestTriangles(scoreIncrement);
-            //HitStrongestTriangles(scoreIncrement);
-            HitStrongestTriangle(scoreIncrement);
 
-            // Check if the player lands on a triangle
-            CheckPlayerCollision();
-
-            // Check if the player is on the same tile as a spotlight
-            CheckSpotlightCollision();
-
-            //(mult + "  " + scoreIncrement);
+            // giving negative score without the spotlight multiplier
             if(validMove)score += scoreIncrement*mult;
             else score += scoreIncrement;
-            scoreText.text = score.ToString();
-            gameController.avarage = score/((moveCount%16)+1);
 
-            gameController.CheckPlayerHeartCollision();
+            scoreText.text = mult.ToString();
+            gameController.avarage = score/((moveCount%16)+1);
         }
 
         else
@@ -152,6 +122,27 @@ public class Player : MonoBehaviour
         StartCoroutine(ResetAnimation("Player_Moving"));
     }
 
+    private void CheckForSpotlightCollision()
+    {
+        // Check for nearby colliders in the spotlight layer
+        Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, 1f, spotlightLayer);
+
+        // mult start with one in each check
+        mult = 1;
+
+        foreach (Collider2D collider in colliders)
+        {
+            // Instead of using GetComponent, use the SpotlightCache to get the spotlight reference
+            SpotlightSquare spotlight;
+
+            if (SpotlightSquare.cachedSpotlights.TryGetValue(collider.gameObject, out spotlight) && spotlight != null)
+            {
+                // mult gets multiplied if there is a spotlight overlapping with the player
+                mult *= spotlight.powerLevel;
+            }
+        }
+    }
+
     private IEnumerator WrongMove(Vector2 direction)
     {
         rb.AddForce(direction*(int)(200*tileSize));
@@ -159,11 +150,6 @@ public class Player : MonoBehaviour
         yield return new WaitForSeconds(beatTimer.beatInterval/4);
 
         rb.AddForce(-direction*(int)(200*tileSize));
-    }
-
-    private void Snap()
-    {
-        //
     }
 
     private IEnumerator ResetAnimation(string animationName)
@@ -178,49 +164,6 @@ public class Player : MonoBehaviour
         if(!takingDamage)animator.Play("idle"); // Replace "Idle" with the name of your default animation state
     }
 
-    private void HitClosestTriangles(int damage)
-    {
-        if (gameController.enemies.Count == 0)
-        {
-            return; // No enemies to hit
-        }
-
-        // Calculate the minimum distance to any triangle
-        float minDistance = gameController.enemies.Min(t => Vector2Int.Distance(position, t.position));
-
-        // Find all triangles at the minimum distance
-        var closestTriangles = gameController.enemies
-            .Where(t => Mathf.Approximately(Vector2Int.Distance(position, t.position), minDistance))
-            .ToList();
-
-        // Deal damage to the closest triangle(s)
-        foreach (var triangle in closestTriangles)
-        {
-            triangle.TakeDamage(damage);
-        }
-    }
-
-    private void HitStrongestTriangles(int damage)
-    {
-        if (gameController.enemies.Count == 0)
-        {
-            return; // No enemies to hit
-        }
-
-        // Calculate the maximum power level among all triangles
-        int maxPower = gameController.enemies.Max(t => t.powerLevel);
-
-        // Find all triangles with the maximum power level
-        var strongestTriangles = gameController.enemies
-            .Where(t => t.powerLevel == maxPower)
-            .ToList();
-
-        // Deal damage to the triangles with the highest power level
-        foreach (var triangle in strongestTriangles)
-        {
-            triangle.TakeDamage(damage);
-        }
-    }
     private void HitStrongestTriangle(int damage)
     {
         if (gameController.enemies.Count == 0)
@@ -242,32 +185,6 @@ public class Player : MonoBehaviour
         }
     }
 
-
-
-    private void CheckPlayerCollision()
-    {
-        var triangle = gameController.enemies.FirstOrDefault(t => t.position == position);
-        if (triangle != null)
-        {
-            TakeDamage(triangle.powerLevel); // Example damage value, you can adjust as needed
-        }
-    }
-    private int mult;
-    private void CheckSpotlightCollision()
-    {
-        var spotlight = gameController.spotlights.FirstOrDefault(s => s.position == position);
-
-        if (spotlight != null)
-        {
-            mult = spotlight.powerLevel; // Multiply score by the spotlight's power level
-            Debug.Log($"Player's score multiplied by {spotlight.powerLevel}. New score: {score}");
-        }
-        else
-        {
-            mult = 1;
-        }
-    }
-
     public void TakeDamage(int damage)
     {
         health -= damage;
@@ -278,29 +195,13 @@ public class Player : MonoBehaviour
             gameController.OpenEndScreen();
         }
 
-        // Play hit sound
-        UpdateHealthBar();
-        PlayHitSound();
         StartCoroutine(DamageTaken());
-    }
-
-    private void UpdateHealthBar()
-    {
-        float perc = (float)health/maxHealth;
-        int number = (int)(46*perc);
-
-        for (int i = 0; i < 46; i++)
-        {
-            //if(i>number)gameController.health[i].SetActive(false);
-            //else if (i<=number)gameController.health[i].SetActive(true);
-        }
     }
 
     private bool takingDamage = false;
     private IEnumerator DamageTaken()
     {
         animator.Play("Player_Damage");
-        canMove = false;
         takingDamage = true;
 
         yield return new WaitForSeconds(beatTimer.beatInterval);
@@ -309,25 +210,23 @@ public class Player : MonoBehaviour
         takingDamage=false;
     }
 
-    private void PlayMoveSound()
+    void OnTriggerEnter2D(Collider2D other)
     {
-        if (moveSound != null && audioSource != null)
+        if(other.CompareTag("Triangle"))
         {
-            audioSource.PlayOneShot(moveSound);
+            Triangle triangle;
+            if(Triangle.cachedTriangles.TryGetValue(other.gameObject, out triangle))
+            {
+                TakeDamage(triangle.powerLevel);
+                print("damageTaken: "+triangle.powerLevel);
+            }
         }
-    }
 
-    private void PlayHitSound()
-    {
-        if (hitSound != null && audioSource != null)
+        if(other.CompareTag("Heart"))
         {
-            audioSource.PlayOneShot(hitSound);
+            gameController.CollectHeart(other.gameObject);
         }
-    }
 
-    void OnCollisionEnter2D(Collision2D collision)
-    {
-        // Placeholder for handling collisions
     }
 
     public void HandleInput()

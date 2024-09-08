@@ -3,12 +3,16 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Heart
+  - Spotlight
+  - Triangle
+  - Tile
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Spotlight
   - Water
   - UI
   - 

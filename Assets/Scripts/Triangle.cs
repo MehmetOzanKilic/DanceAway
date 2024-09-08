@@ -28,6 +28,8 @@ public class Triangle : MonoBehaviour
     private Rigidbody2D rb;
     public bool isChasingPlayer = false;
 
+    public static Dictionary<GameObject, Triangle> cachedTriangles = new Dictionary<GameObject, Triangle>();
+
 
     public void Initialize(Vector2Int initialPosition, GameController controller, BeatTimer timer)
     {
@@ -51,6 +53,11 @@ public class Triangle : MonoBehaviour
             Debug.Log("Animator has Triangle_Damage_Idle: " + hasState);
         }
         childAnimator.Play("Triangle_Damage_Idle");
+
+        if (!cachedTriangles.ContainsKey(gameObject))
+        {
+            cachedTriangles[gameObject] = this;
+        }
 
         // Set initial color based on power level
         UpdateColor();
@@ -91,6 +98,10 @@ public class Triangle : MonoBehaviour
 
     void OnDestroy()
     {
+        if (cachedTriangles.ContainsKey(gameObject))
+        {
+            cachedTriangles.Remove(gameObject);
+        }
     }
 
     public void SetInitialMoves()
@@ -182,12 +193,6 @@ public class Triangle : MonoBehaviour
 
         //transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         moveCount++; // Increment move counter
-
-        // Check if the triangle steps on the player's position
-        if (position == gameController.player.position)
-        {
-            gameController.player.TakeDamage(powerLevel); // Example damage value, you can adjust as needed
-        }
 
         // Play movement sound
         PlayMoveSound();

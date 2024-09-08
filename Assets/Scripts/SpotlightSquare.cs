@@ -22,6 +22,7 @@ public class SpotlightSquare: MonoBehaviour
     private List<Vector2Int> initialMoves = new List<Vector2Int>();
 
     private Rigidbody2D rb;
+    public static Dictionary<GameObject, SpotlightSquare> cachedSpotlights = new Dictionary<GameObject, SpotlightSquare>();
 
     public void Initialize(Vector2Int initialPosition, GameController controller, BeatTimer timer, int initialPowerLevel)
     {
@@ -36,6 +37,11 @@ public class SpotlightSquare: MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         speed = gameController.tileSize / beatTimer.beatInterval;
         health = powerLevel * 600; // Same health formula as Triangle
+
+        if (!cachedSpotlights.ContainsKey(gameObject))
+        {
+            cachedSpotlights[gameObject] = this;
+        }
 
         // Set initial color based on power level
         UpdateColor();
@@ -73,7 +79,7 @@ public class SpotlightSquare: MonoBehaviour
         moveTimer += Time.deltaTime;*/
         if (canMove)
         {
-            float moveDistance = speed * Time.fixedDeltaTime; // Distance to move in one frame
+            float moveDistance = speed * Time.fixedDeltaTime / 2; // Distance to move in one frame
             rb.MovePosition(rb.position + new Vector2(currentDirection.x * moveDistance, currentDirection.y * moveDistance));
         }
         
@@ -81,6 +87,10 @@ public class SpotlightSquare: MonoBehaviour
 
     void OnDestroy()
     {
+        if(cachedSpotlights.ContainsKey(gameObject))
+        {
+            cachedSpotlights.Remove(gameObject);
+        }
     }
 
     private Vector2Int prePosition;

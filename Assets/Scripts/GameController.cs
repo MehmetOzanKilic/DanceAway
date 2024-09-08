@@ -94,7 +94,7 @@ public class GameController : MonoBehaviour
         
         foreach (var spotlight in spotlights)
         {
-            spotlight.Move();
+            if(beatCounter%2==0)spotlight.Move();
         }
 
         if (beatCounter % 2 == 0 && isSpawningEnemies)
@@ -676,7 +676,7 @@ public class GameController : MonoBehaviour
     }
 
     // Function to handle collecting the heart
-    private void CollectHeart(GameObject heart)
+    public void CollectHeart(GameObject heart)
     {
         // Add logic here to increase the player's health or score
         Debug.Log("Heart collected!");

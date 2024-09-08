@@ -118,7 +118,7 @@ public class CrowdController : MonoBehaviour
 
     public void MoreNodders(int more)
     {
-        print("more nodders:" + more);
+        //print("more nodders:" + more);
         if(more>notNodders.Count)more=notNodders.Count;
         for(int i = 0; i<more; i++)
         {
@@ -136,7 +136,7 @@ public class CrowdController : MonoBehaviour
 
     public void LessNodders(int less)
     {
-        print("less nodders:" + less);
+        //print("less nodders:" + less);
         if(less>nodders.Count)less=nodders.Count;
         for (int i = 0; i < less; i++)
         {

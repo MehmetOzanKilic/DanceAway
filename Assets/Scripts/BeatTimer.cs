@@ -6,12 +6,10 @@ using Common.Enums;
 public class BeatTimer : MonoBehaviour
 {   
     [Range(0,1)]
-    [SerializeField]private float timeS;
+    [SerializeField]private float timeS; // To controle timescale for debugging
+    [SerializeField]public float beatInterval = 0.6f; // Time between beats in seconds
     private GameController gameController;
-    public float beatInterval = 0.6f; // Time between beats in seconds
-    public float nextBeatTime;
     public event Action OnBeat;
-    public event Action CanMove;
     public SpriteRenderer backGround;
     public float timer;
     public float tolerance=0.04f;
@@ -19,15 +17,12 @@ public class BeatTimer : MonoBehaviour
     public bool play;
     private bool levelFlag=false;
     public int beatCounter;
-    private bool handPlay;
 
     void Awake()
     {
         backGround = GameObject.Find("BackGround").GetComponent<SpriteRenderer>();
-        backGround = GameObject.Find("BackGround").GetComponent<SpriteRenderer>();
-        nextBeatTime = Time.time + beatInterval;
         gameController = GetComponent<GameController>();    
-        timer=beatInterval/2;
+        timer=0;
         State = BeatState.OffBeat;
 
     }
@@ -35,7 +30,6 @@ public class BeatTimer : MonoBehaviour
     {   
         beatCounter=0;
         play=true;
-        handPlay=true;
     }
 
     void FixedUpdate()
@@ -56,8 +50,8 @@ public class BeatTimer : MonoBehaviour
     }
     void PlayHand()
     {
-        print("playHand");
         if(gameController)gameController.PlayHand();
+        gameController.avarage=0;
     }
     private bool beatFlag=true;
     void CheckAction()
@@ -67,25 +61,25 @@ public class BeatTimer : MonoBehaviour
         // Check closest to the beat
         if ((modTimer <= tolerance) || (modTimer >= (beatInterval - tolerance)))
         {
-            backGround.color = Color.red; // Very close to the beat
+            backGround.color = Color.red;
             State = BeatState.PerfectBeat;
         }
         // Second closest to the beat
         else if ((modTimer <= 2 * tolerance) || (modTimer >= (beatInterval - 2 * tolerance)))
         {
-            backGround.color = Color.blue; // Second level of closeness
+            backGround.color = Color.blue;
             State = BeatState.CloseBeat;
         }
         // Third closest to the beat
         else if ((modTimer <= 3 * tolerance) || (modTimer >= (beatInterval - 3 * tolerance)))
         {
-            backGround.color = Color.green; // Third level of closeness
+            backGround.color = Color.green;
             State = BeatState.MiddleBeat;
         }
         // Fourth closest to the beat
         else if ((modTimer <= 4 * tolerance) || (modTimer >= (beatInterval - 4 * tolerance)))
         {
-            
+            // PlayBack/Hand gets called at the start of the beat to make the music fit better.
             if(State == BeatState.OffBeat)
             {
                 if(beatCounter%16==0)
@@ -98,7 +92,7 @@ public class BeatTimer : MonoBehaviour
                     play=false;
                 }
             }
-            backGround.color = Color.yellow; // Farthest in the close range
+            backGround.color = Color.yellow;
             State = BeatState.FarBeat;
         }
         else
@@ -116,7 +110,7 @@ public class BeatTimer : MonoBehaviour
                 gameController.LoadLevel();
                 levelFlag=false;
             }
-            if(beatFlag) 
+            if(beatFlag)// to ensure beat happens only once per beatInterval 
             {
                 OnBeat?.Invoke();
                 beatCounter++;

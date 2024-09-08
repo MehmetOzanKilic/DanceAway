@@ -68,12 +68,12 @@ public class SwipeController : MonoBehaviour
         {
             if (x > 0)
             {
-                Debug.Log("Swipe Right");
+                //Debug.Log("Swipe Right");
                 if (isSwipe)player.Move(Vector2Int.right);
             }
             else
             {
-                Debug.Log("Swipe Left");
+                //Debug.Log("Swipe Left");
                 if (isSwipe)player.Move(Vector2Int.left);
             }
         }
@@ -81,12 +81,12 @@ public class SwipeController : MonoBehaviour
         {
             if (y > 0)
             {
-                Debug.Log("Swipe Up");
+                //Debug.Log("Swipe Up");
                 if (isSwipe)player.Move(Vector2Int.up);
             }
             else
             {
-                Debug.Log("Swipe Down");
+                //Debug.Log("Swipe Down");
                 if (isSwipe)player.Move(Vector2Int.down);
             }
         }
