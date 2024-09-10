@@ -3,46 +3,39 @@ using System.Collections.Generic;
 
 public class SpotlightSquare: MonoBehaviour
 {
-    public Vector2Int position;
-    public Vector2Int previousPosition; // To track the previous position
-
-    public GameController gameController; // Reference to GameController
+    [HideInInspector]public Vector2Int position;
+    [HideInInspector]public Vector2Int previousPosition; // To track the previous position
+    private GameController gameController; // Reference to GameController
     private BeatTimer beatTimer;
-    public AudioClip moveSound; // Sound to play when the spotlight moves
-    public Vector2Int nextPosition; // Make nextPosition public
-    public Vector2Int currentDirection; // Make currentDirection public
-    public int powerLevel; // Starting power level for spotlights
-    public int moveCount = 0; // Move counter starting at 0
+    private Vector2Int nextPosition; // Make nextPosition public
+    private Vector2Int currentDirection; // Make currentDirection public
+    [HideInInspector]public int powerLevel; // Starting power level for spotlights
+    [HideInInspector]public int moveCount = 0; // Move counter starting at 0
     [SerializeField] private float speed;
-    private int health;
     private SpriteRenderer spriteRenderer;
-
-    private AudioSource audioSource;
-
     private List<Vector2Int> initialMoves = new List<Vector2Int>();
-
     private Rigidbody2D rb;
-    public static Dictionary<GameObject, SpotlightSquare> cachedSpotlights = new Dictionary<GameObject, SpotlightSquare>();
+    [HideInInspector]public static Dictionary<GameObject, SpotlightSquare> cachedSpotlights = new Dictionary<GameObject, SpotlightSquare>();
 
     public void Initialize(Vector2Int initialPosition, GameController controller, BeatTimer timer, int initialPowerLevel)
     {
+        // Setting initial parameters.
         position = initialPosition;
         gameController = controller;
         beatTimer = timer;
         powerLevel = initialPowerLevel; // Set power level from the triangle it spawned from
+        // Setting initial position
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         nextPosition = position;
-        audioSource = GetComponent<AudioSource>();
+
         spriteRenderer = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
         speed = gameController.tileSize / beatTimer.beatInterval;
-        health = powerLevel * 600; // Same health formula as Triangle
-
+        // Adding each triangle to a static cache to use during collision checks in the player script
         if (!cachedSpotlights.ContainsKey(gameObject))
         {
             cachedSpotlights[gameObject] = this;
         }
-
         // Set initial color based on power level
         UpdateColor();
     }
@@ -51,38 +44,11 @@ public class SpotlightSquare: MonoBehaviour
     {
     }
 
-    private float moveTimer = 0;
-    private bool canMove = true;
-
     void FixedUpdate()
     {
-        /*// Check if it's time to stop moving
-        if (moveTimer >= beatTimer.beatInterval / 3 && canMove)
-        {
-            transform.position=new Vector3(nextPosition.x*gameController.tileSize,nextPosition.y*gameController.tileSize,0);
-            canMove = false;
-            DecideNextMove();
-        }
-
-        // Move only if allowed and it's within the first half of the beat interval
-        if (canMove && moveTimer < beatTimer.beatInterval / 3)
-        {
-            float moveDistance = speed * Time.fixedDeltaTime; // Distance to move in one frame
-            rb.MovePosition(rb.position + new Vector2(currentDirection.x * moveDistance, currentDirection.y * moveDistance));
-        }
-        else
-        {
-            // Stop the movement after half-beat
-            rb.velocity = Vector2.zero;
-        }
-
-        moveTimer += Time.deltaTime;*/
-        if (canMove)
-        {
-            float moveDistance = speed * Time.fixedDeltaTime / 2; // Distance to move in one frame
-            rb.MovePosition(rb.position + new Vector2(currentDirection.x * moveDistance, currentDirection.y * moveDistance));
-        }
-        
+        // Spotlight move half as slow to give the player chance to be on the spotlight
+        float moveDistance = speed * Time.fixedDeltaTime / 2; // Distance to move in one frame
+        rb.MovePosition(rb.position + new Vector2(currentDirection.x * moveDistance, currentDirection.y * moveDistance));
     }
 
     void OnDestroy()
@@ -92,8 +58,6 @@ public class SpotlightSquare: MonoBehaviour
             cachedSpotlights.Remove(gameObject);
         }
     }
-
-    private Vector2Int prePosition;
 
     public void DecideNextMove()
     {
@@ -114,21 +78,15 @@ public class SpotlightSquare: MonoBehaviour
     public void Move()
     {
         DecideNextMove();
-        canMove = true;
-        moveTimer = 0;
         previousPosition = position; // Store the current position as the previous position
         position = nextPosition;     // Update the current position to the next position
         moveCount++; // Increment move counter
-
-        // Play movement sound
-        PlayMoveSound();
     }
 
 
     public void MergeSpotlights(int numberOfSpotlights)
     {
         powerLevel = powerLevel * (int)Mathf.Pow(2, numberOfSpotlights - 1);
-        health = powerLevel * 350;
         UpdateColor(); // Update the color based on the new power level
     }
 
@@ -148,58 +106,39 @@ public class SpotlightSquare: MonoBehaviour
                 spriteRenderer.color = color;
                 break;
             case 4:
-                color = Color.cyan;
-                color.a = 0.5f;
-                spriteRenderer.color = color;
-                break;
-            case 8:
-                color = Color.magenta;
-                color.a = 0.5f;
-                spriteRenderer.color = color;
-                break;
-            case 16:
                 color = Color.red;
                 color.a = 0.5f;
                 spriteRenderer.color = color;
                 break;
-            case 32:
-                color = Color.blue;
-                color.a = 0.5f;
-                spriteRenderer.color = color;
-                break;
-            case 64:
+            case 8:
                 color = Color.green;
                 color.a = 0.5f;
                 spriteRenderer.color = color;
                 break;
-            case 128:
+            case 16:
+                color = Color.blue;
+                color.a = 0.5f;
+                spriteRenderer.color = color;
+                break;
+            case 32:
                 color = Color.yellow;
                 color.a = 0.5f;
                 spriteRenderer.color = color;
                 break;
-            default:
-                color = Color.grey;
+            case 64:
+                color = Color.gray;
                 color.a = 0.5f;
-                spriteRenderer.color = color; // Default color if power level exceeds 16
+                spriteRenderer.color = color;
+                break;
+            default:
+                color = Color.black;
+                color.a = 0.5f;
+                spriteRenderer.color = color;
                 break;
         }
     }
 
-    private Vector2Int GetRandomDirection()
-    {
-        List<Vector2Int> validDirections = new List<Vector2Int>();
-
-        if (position.y + 1 < gameController.height-1) validDirections.Add(Vector2Int.up);
-        if (position.y - 1 >= 0) validDirections.Add(Vector2Int.down);
-        if (position.x - 1 >= 0) validDirections.Add(Vector2Int.left);
-        if (position.x + 1 < gameController.width-1) validDirections.Add(Vector2Int.right);
-
-        if (validDirections.Count == 0) return Vector2Int.zero; // Stay in place if no valid moves
-
-        int rand = Random.Range(0, validDirections.Count);
-        return validDirections[rand];
-    }
-
+    // Same as Triangle.
     private Vector2Int GetRandomValidDirection()
     {
         List<Vector2Int> directions = new List<Vector2Int>
@@ -248,18 +187,5 @@ public class SpotlightSquare: MonoBehaviour
     {
         Vector3 directionVector = new Vector3(direction.x, direction.y, 0);
         transform.up = directionVector;
-    }
-
-    private void PlayMoveSound()
-    {
-        if (moveSound != null && audioSource != null)
-        {
-            audioSource.PlayOneShot(moveSound);
-        }
-    }
-
-    void OnCollisionEnter2D(Collision2D collision)
-    {
-        // Placeholder for handling collisions
     }
 }

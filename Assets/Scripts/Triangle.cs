@@ -5,61 +5,61 @@ using System.Collections;
 
 public class Triangle : MonoBehaviour
 {
-    [SerializeField]private int baseHealth=200;    
-    public Vector2Int position;
-    public Vector2Int previousPosition; // To track the previous position
-
-    public GameController gameController; // Reference to GameController
+    [SerializeField]private GameObject spotlightPrefab;
+    [SerializeField]private int baseHealth=200;
+    [HideInInspector]public int health;
+    [SerializeField]private float speed;    
+    [HideInInspector]public Vector2Int position;
+    [HideInInspector]public Vector2Int previousPosition; // To track the previous position
+    [HideInInspector]public GameController gameController; // Reference to GameController
     private BeatTimer beatTimer;
     public AudioClip moveSound; // Sound to play when the triangle moves
-    public Vector2Int nextPosition; // Make nextPosition public
-    public Vector2Int currentDirection; // Make currentDirection public
-    public int powerLevel = 2; // Starting power level for triangles
-    public int moveCount = 0; // Move counter starting at 0
-    [SerializeField]private float speed;
-    [SerializeField]private GameObject spotlightPrefab;
-    public int health;
+    [HideInInspector]public Vector2Int nextPosition; // Make nextPosition public
+    [HideInInspector]public Vector2Int currentDirection; // Make currentDirection public
+    [HideInInspector]public int powerLevel = 2; // Starting power level for triangles
+    [HideInInspector]public int moveCount = 0; // Move counter starting at 0
     private SpriteRenderer spriteRenderer;
-
     private AudioSource audioSource;
-
     private List<Vector2Int> initialMoves = new List<Vector2Int>();
-
     private Rigidbody2D rb;
-    public bool isChasingPlayer = false;
-
-    public static Dictionary<GameObject, Triangle> cachedTriangles = new Dictionary<GameObject, Triangle>();
+    [HideInInspector]public bool isChasingPlayer = false;
+    [HideInInspector]public static Dictionary<GameObject, Triangle> cachedTriangles = new Dictionary<GameObject, Triangle>();
 
 
     public void Initialize(Vector2Int initialPosition, GameController controller, BeatTimer timer)
     {
+        // Giving initial parameters
         position = initialPosition;
         gameController = controller;
         beatTimer = timer;
+        // Positioning in the correct initial position
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         nextPosition = position;
+
         audioSource = GetComponent<AudioSource>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
+        // Adjusting speed for correct movement
         speed = gameController.tileSize/(beatTimer.beatInterval/3);
+        // Resetin health to full in each Initializetion while multiplying with the power level
         health = powerLevel * baseHealth;
+        // Initial animation 
         animator = GetComponent<Animator>();
         childAnimator = transform.GetChild(0).GetComponent<Animator>();
         animator.Play("Triangle_Idle");
-        
         if (childAnimator != null)
         {
             bool hasState = childAnimator.HasState(0, Animator.StringToHash("Triangle_Damage_Idle"));
             Debug.Log("Animator has Triangle_Damage_Idle: " + hasState);
         }
         childAnimator.Play("Triangle_Damage_Idle");
-
+        // Adding each triangle to a static cache to use during collision checks in the player script
         if (!cachedTriangles.ContainsKey(gameObject))
         {
             cachedTriangles[gameObject] = this;
         }
 
-        // Set initial color based on power level
+        // Set the color based on power level
         UpdateColor();
     }
 
@@ -72,7 +72,7 @@ public class Triangle : MonoBehaviour
     private bool canMove=true;
     void FixedUpdate()
     {
-        // Check if it time totop moving
+        // Snap to the position
         if (moveTimer >= beatTimer.beatInterval / 3 && canMove)
         {
             transform.position=new Vector3(nextPosition.x*gameController.tileSize,nextPosition.y*gameController.tileSize,0);
@@ -80,7 +80,7 @@ public class Triangle : MonoBehaviour
             DecideNextMove();
         }
 
-        // Move only if allowed and it's within the first half of the beat interval
+        // Move to the next position
         if (canMove && moveTimer < beatTimer.beatInterval / 3)
         {
             float moveDistance = speed * Time.fixedDeltaTime; // Distance to move in one frame
@@ -104,6 +104,7 @@ public class Triangle : MonoBehaviour
         }
     }
 
+    // A function to make sure the triangle initially moves to the inside of the arena 
     public void SetInitialMoves()
     {
         if (position.y ==  gameController.height) // Coming from above
@@ -119,17 +120,17 @@ public class Triangle : MonoBehaviour
         else if (position.x == -1) // Coming from the left
         {
             initialMoves.Add(Vector2Int.right);
-            initialMoves.Add(Vector2Int.right);
+            //initialMoves.Add(Vector2Int.right);
         }
         else if (position.x == gameController.width) // Coming from the right
         {
             initialMoves.Add(Vector2Int.left);
-            initialMoves.Add(Vector2Int.left);
+            //initialMoves.Add(Vector2Int.left);
         }
     }
-    public bool flag2D = true;
     public void DecideNextMove()
     {
+        // Makes sure the triangles leave the area from the bottom
         if(position.y == 0)
         {
             currentDirection = Vector2Int.down;
@@ -145,10 +146,7 @@ public class Triangle : MonoBehaviour
         }
         else
         {
-            if(flag2D)
-            currentDirection = GetRandomValidDirection();
-            else
-            currentDirection = GetRandomValidDirection1D();
+            currentDirection = GetRandomValidDirectionDown();
         }
 
         nextPosition = position + currentDirection;
@@ -156,59 +154,57 @@ public class Triangle : MonoBehaviour
     }
 
     private int chasingNo = 0;
-    // New method to get direction towards the player
+    [SerializeField]private bool chaseBreak=true;// To control if triangle can take a chase break
+    // Method to get direction towards the player
     private Vector2Int GetDirectionTowardsPlayer()
     {
         chasingNo++;
-        if(chasingNo%2==0)
+        if(chaseBreak && chasingNo%2==0)
         {
-            return Vector2Int.down;
+            return Vector2Int.down;// Only chase player every 2 moves once.
         }
 
         Vector2Int playerPos = gameController.player.position;
         Vector2Int direction = Vector2Int.zero;
 
+        // Triangle checks the horizantal position fisrt to get the correct column then moves downward
         if (position.x < playerPos.x) direction = Vector2Int.right;
         else if (position.x > playerPos.x) direction = Vector2Int.left;
-        else if (position.y < playerPos.y) direction = Vector2Int.up;
+        else if (position.y < playerPos.y) direction = Vector2Int.down;// To prevent reverse chasing
         else if (position.y > playerPos.y) direction = Vector2Int.down;
 
         if (IsValidMove(position + direction))
             return direction;
 
-        return GetRandomValidDirection(); // Fallback to random move if the direct path is blocked
+        return GetRandomValidDirectionDown(); // Fallback to random move if the direct path is blocked
     }
 
 
     public void Move()
     {
+        // Teleports triangle to the top of the column if they reach the bottom
         if(position.y == 0)
         {
             nextPosition.y = gameController.height-1;
         }
+
         canMove=true;
         moveTimer=0;
         previousPosition = position;
         position = nextPosition;
 
-        //transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         moveCount++; // Increment move counter
 
-        // Play movement sound
-        PlayMoveSound();
         StartCoroutine(ResetAnimation("Triangle_Moving"));
     }
 
     private IEnumerator ResetAnimation(string animationName)
     {
-        // Get the runtime animator controller
         animator.Play(animationName);
 
-        // Wait until the animation has finished playing
         yield return new WaitForSeconds(0.45f);
 
-        // Optionally, reset the animation to the default state
-        animator.Play("Triangle_Idle"); // Replace "Idle" with the name of your default animation state
+        animator.Play("Triangle_Idle");
     }
 
     public void MergeTriangles(int numberOfTriangles, int combinedHealth)
@@ -239,8 +235,14 @@ public class Triangle : MonoBehaviour
             case 16:
                 spriteRenderer.color = Color.blue;
                 break;
+            case 32:
+                spriteRenderer.color = Color.yellow;
+                break;
+            case 64:
+                spriteRenderer.color = Color.gray;
+                break;
             default:
-                spriteRenderer.color = Color.white; // Default color if power level exceeds 16
+                spriteRenderer.color = Color.black; // Default color if power level exceeds 16
                 break;
         }
     }
@@ -256,6 +258,7 @@ public class Triangle : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
     private Animator animator;
     private Animator childAnimator;
     private IEnumerator DamageTaken()
@@ -267,51 +270,8 @@ public class Triangle : MonoBehaviour
         
         childAnimator.Play("Triangle_Damage_Idle");
     }
-
-    private Vector2Int GetRandomDirection()
-    {
-        List<Vector2Int> validDirections = new List<Vector2Int>();
-
-        if (position.y + 1 < gameController.height-1) validDirections.Add(Vector2Int.up);
-        if (position.y - 1 >= 0) validDirections.Add(Vector2Int.down);
-        if (position.x - 1 >= 0) validDirections.Add(Vector2Int.left);
-        if (position.x + 1 < gameController.width-1) validDirections.Add(Vector2Int.right);
-
-        if (validDirections.Count == 0) return Vector2Int.zero; // Stay in place if no valid moves
-
-        int rand = Random.Range(0, validDirections.Count);
-        return validDirections[rand];
-    }
-
-    private Vector2Int GetRandomValidDirection()
-    {
-        List<Vector2Int> directions = new List<Vector2Int>
-        {
-            Vector2Int.up,
-            Vector2Int.down,
-            Vector2Int.left,
-            Vector2Int.right
-        };
-
-        while (directions.Count > 0)
-        {
-            int index = Random.Range(0, directions.Count);
-            Vector2Int dir = directions[index];
-            Vector2Int nextPos = position + dir;
-
-            if (IsValidMove(nextPos))
-            {
-                return dir;
-            }
-
-            directions.RemoveAt(index);
-            
-        }
-
-        return Vector2Int.zero; // Stay in place if no valid moves
-    }
-
-    private Vector2Int GetRandomValidDirection1D()
+    // Random direction with a more tendecy to go down.
+    private Vector2Int GetRandomValidDirectionDown()
     {
         List<Vector2Int> directions = new List<Vector2Int>
         {
@@ -339,7 +299,7 @@ public class Triangle : MonoBehaviour
 
         return Vector2Int.zero; // Stay in place if no valid moves
     }
-
+    // Checks if the move is valid
     private bool IsValidMove(Vector2Int nextPosition)
     {
         if (nextPosition.x < 0 || nextPosition.x >= gameController.width || nextPosition.y < 0 || nextPosition.y >= gameController.height)
@@ -367,16 +327,4 @@ public class Triangle : MonoBehaviour
         transform.up = directionVector;
     }
 
-    private void PlayMoveSound()
-    {
-        if (moveSound != null && audioSource != null)
-        {
-            audioSource.PlayOneShot(moveSound);
-        }
-    }
-
-    void OnCollisionEnter2D(Collision2D collision)
-    {
-        // Placeholder for handling collisions
-    }
 }

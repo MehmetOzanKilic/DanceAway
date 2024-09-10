@@ -5,22 +5,14 @@ using UnityEngine;
 public class CrowdController : MonoBehaviour
 {
     [SerializeField]private GameObject trianglePrefab;
-    [SerializeField]private int crowdNumber;
-    public BeatTimer beatTimer;
-    [SerializeField]private float distribution;
     [SerializeField]private int xOffset;
     [SerializeField]private int yOffset;
-
-    private int width;
-    private int height;
-    private float tileSize;
     private List<GameObject> crowd;
-    // Start is called before the first frame update
     void Start()
     {
         
     }
-
+    // Initialized after GameController
     public void Initialize(BeatTimer beatTimer,int width,int height,float tileSize)
     {
         crowd = new List<GameObject>();
@@ -34,27 +26,30 @@ public class CrowdController : MonoBehaviour
     }
 
     private void SpawnCrowd(BeatTimer beatTimer,int width,int height, float tileSize)
-    {
+    {   
+        // Determines how wide and tall the crowd will be
         int xLenght = (int)(width*tileSize)/4;
         int yLenght = (int)(height*tileSize) + 5;
 
+        // Spawns columns until the desired width is reached
         for (int i = 0; i < xLenght/xOffset; i++)
-        {
+        {   
+            // Fills each column with triangles from top to bottom
             for (int j = 0; j < yLenght/yOffset; j++)
             {
+                // Position of individual left triangles according to the offsets
                 float xPos = -(i*xOffset)-(tileSize*0.75f);
                 float yPos = (j*yOffset)-(tileSize*0.75f);
                 if(i%2==1)yPos+=yOffset/2;
                 GameObject triangle = Instantiate(trianglePrefab,new Vector3( xPos, yPos, 0), Quaternion.identity);
-                //triangle.GetComponent<cTriangle>().tRotation = 0;
                 triangle.GetComponent<SpriteRenderer>().sortingOrder = (int)(1000-xPos);
                 crowd.Add(triangle);
 
+                // Position of individual right triangles according to the offsets
                 xPos = (i*xOffset)+((width-1)*tileSize) + (tileSize*0.75f);
                 yPos = (j*yOffset)-(tileSize*0.75f);
                 if(i%2==1)yPos+=yOffset/2;
                 triangle = Instantiate(trianglePrefab,new Vector3( xPos, yPos, 0), Quaternion.identity);
-                //triangle.GetComponent<cTriangle>().tRotation = 180;
                 triangle.transform.eulerAngles = new Vector3(0,180,0);
                 triangle.GetComponent<SpriteRenderer>().sortingOrder = (int)(1000+xPos);
                 crowd.Add(triangle);
@@ -63,31 +58,11 @@ public class CrowdController : MonoBehaviour
 
         SelectInitialNodders();
 
+        // Initiaizing each cTriangle
         foreach(GameObject triangle in crowd)
         {
             triangle.GetComponent<cTriangle>().Initialize(beatTimer);
         }
-        /*for (int i = 0; i<crowdNumber ; i++)
-        {
-            float randomY = (int)(Random.Range(-8/distribution, 50/distribution)*distribution);
-            if(i<crowdNumber/2)
-            {
-                float randomX = (int)(Random.Range(-6/distribution,-30/distribution)*distribution);
-                GameObject triangle = Instantiate(trianglePrefab,new Vector3(randomX, randomY,0), Quaternion.identity);
-                triangle.GetComponent<cTriangle>().Initialize(beatTimer,randomX,randomY);
-                triangle.GetComponent<cTriangle>().tRotation = 0;
-                triangle.transform.GetChild(0).GetComponent<SpriteRenderer>().sortingOrder = (int)(1000-randomX);
-            }
-            else if(i>=crowdNumber/2)
-            {
-                float randomX = (int)(Random.Range(46/distribution, 70/distribution)*distribution);
-                GameObject triangle = Instantiate(trianglePrefab,new Vector3(randomX, randomY,0), Quaternion.identity);
-                triangle.transform.eulerAngles = new Vector3(0,180,0); 
-                triangle.GetComponent<cTriangle>().Initialize(beatTimer,randomX,randomY);
-                triangle.GetComponent<cTriangle>().tRotation = 180;
-                triangle.transform.GetChild(0).GetComponent<SpriteRenderer>().sortingOrder = (int)(1000+randomX);
-            }
-        }*/
     }
 
     private List<cTriangle> nodders;
@@ -99,8 +74,9 @@ public class CrowdController : MonoBehaviour
         nodders = new List<cTriangle>();
         notNodders = new List<GameObject>(crowd);
         
+        // The number of initial nodders according to the crowd number
         int initialNoddernum = (int)(notNodders.Count*initialNodderPer);
-        print("initialNoddernum:" + initialNoddernum);  
+        // Randomly activating nodding for some cTriangles.
         for(int i = 0; i<initialNoddernum; i++)
         {
             int random = Random.Range(0, notNodders.Count);
@@ -116,6 +92,7 @@ public class CrowdController : MonoBehaviour
 
     }
 
+    // Method to randomly activate more cTriangles to nod
     public void MoreNodders(int more)
     {
         //print("more nodders:" + more);
@@ -133,7 +110,7 @@ public class CrowdController : MonoBehaviour
             nodders[i].canNod = true;
         }
     }
-
+    // Method to randomly deactivate some cTriangles to not nod
     public void LessNodders(int less)
     {
         //print("less nodders:" + less);
@@ -143,6 +120,7 @@ public class CrowdController : MonoBehaviour
             int random = Random.Range(0, nodders.Count);
             cTriangle temp = nodders[random];
             temp.canNod = false;
+            temp.NotVibing();
             notNodders.Add(temp.gameObject);
             nodders.RemoveAt(random);
         }

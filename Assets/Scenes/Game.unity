@@ -168,12 +168,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   trianglePrefab: {fileID: 6203632787981481389, guid: 5ad5ccd046092c643bd1c45465fde269, type: 3}
-  crowdNumber: 300
-  beatTimer: {fileID: 1920807224}
-  distribution: 1
   xOffset: 2
   yOffset: 4
-  initialNodderPer: 0.44
+  initialNodderPer: 1
 --- !u!1 &246174448
 GameObject:
   m_ObjectHideFlags: 0

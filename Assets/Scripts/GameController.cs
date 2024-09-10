@@ -174,9 +174,9 @@ public class GameController : MonoBehaviour
         } 
     }
 
-    public void LessNodders()
+    public void LessNodders(int no)
     {
-        crowdController.LessNodders(10);
+        crowdController.LessNodders(no);
     }
 
     public void PlayBack()

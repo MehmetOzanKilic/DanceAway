@@ -6,9 +6,6 @@ public class cTriangle : MonoBehaviour
 {
     public BeatTimer beatTimer;
     private Animator animator;
-    public float tRotation;
-
-    // Start is called before the first frame update
 
     void Start()
     {
@@ -17,23 +14,22 @@ public class cTriangle : MonoBehaviour
     public void Initialize(BeatTimer beatTimerRef)
     {
         beatTimer = beatTimerRef;
-        if(beatTimer == null)print("nonono");
         beatTimer.OnBeat += Nodding;
-        //transform.position = new Vector3(xPos, yPos, 0);
         animator = GetComponent<Animator>();
+        // Initial animation
+        NotVibing();
+    }
+
+    public void NotVibing()
+    {
         float random = Random.Range(0,5);
         Invoke("StartNotVibing",random);
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-    private void StartNotVibing()
+    public void StartNotVibing()
     {
         animator.Play("cTriangle_notVibing");
+        print("here");
     }
 
     public bool canNod=false;

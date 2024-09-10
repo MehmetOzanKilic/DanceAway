@@ -7,6 +7,7 @@ using Common.Enums;
 
 public class Player : MonoBehaviour
 {
+    [SerializeField]private Text scoreText;
     public int score;
     private int maxHealth=100;
     public int health; // Player starting health
@@ -21,13 +22,18 @@ public class Player : MonoBehaviour
 
     void Start()
     {
+        // GameController and BeatTimer scripts
         gameController = GameObject.Find("GameController").GetComponent<GameController>();
-        tileSize = gameController.tileSize;
         beatTimer = GameObject.Find("GameController").GetComponent<BeatTimer>();
-        position = new Vector2Int(((gameController.width+1)/2)-1,0); // Starting position at the bottom-middle tile
+
+        tileSize = gameController.tileSize;
+        // Starting position at the bottom-middle tile
+        position = new Vector2Int(((gameController.width+1)/2)-1,0);
         transform.position = new Vector2(position.x * tileSize, position.y * tileSize);
+        // Starting animation
         animator = GetComponent<Animator>();
         animator.Play("idle");
+
         rb = GetComponent<Rigidbody2D>();
         health = maxHealth;
 
@@ -38,55 +44,53 @@ public class Player : MonoBehaviour
 
     }
 
-
-    private Vector2Int newPosition;
     private int moveCount=0;  
-    [SerializeField]private Text scoreText;
-
-    public int moveAllowed=1;
     private int mult;
     public void Move(Vector2Int direction)
     {
+        Vector2Int newPosition;
         State = beatTimer.State;
 
         bool validMove=true;
 
         if (State == BeatState.OffBeat)
         {
-            validMove=false; // Ignore movement if not allowed
+            validMove=false; // Ignore movement if in OffBeat
         }
 
-        // Only count moves if there are enemies.
-        if(gameController.enemies.Count > 0)moveCount++;
-
+        // Update newPosition if move is valid
         if(validMove)newPosition = position + direction;
+        else newPosition = position;
+
         // Check if the new position is within the grid bounds
         if (newPosition.x >= 0 && newPosition.x < gameController.width && newPosition.y >= 0 && newPosition.y < gameController.height)
         {
             int scoreIncrement = 0;
-            CheckForSpotlightCollision();
+            CheckForSpotlightCollision();// Find out how much mult is.
             if(gameController.enemies.Count > 0)
             {
+                moveCount++;// Only count moves if there are enemies.
                 if (State == BeatState.PerfectBeat)
                 {
-                    scoreIncrement = 200; // Black threshold
+                    scoreIncrement = 200; // Perfect score threshold
                 }
                 else if (State == BeatState.CloseBeat)
                 {
-                    scoreIncrement = 150; // Red threshold
+                    scoreIncrement = 150; // Close score threshold
                 }
                 else if (State == BeatState.MiddleBeat)
                 {
-                    scoreIncrement = 100; // Red threshold
+                    scoreIncrement = 100; // Middle score threshold
                 }
                 else if (State == BeatState.FarBeat)
                 {
-                    scoreIncrement = 50; // Red threshold
+                    scoreIncrement = 50; // Far score threshold
                 }
                 else if (State == BeatState.OffBeat)
                 {
-                    scoreIncrement=-200;
-                    gameController.LessNodders();
+                    // Moving during off beat is punishing.
+                    scoreIncrement=-400;// Make a large score deduction.
+                    gameController.LessNodders(50);// Decrease the number of cTriangles Nodding.
                     StartCoroutine(WrongMove(direction));
                 }
                 else
@@ -95,22 +99,23 @@ public class Player : MonoBehaviour
                 }
 
             }
-            // Update player's position
-            
+
+            // Update player's position and move player.           
             if(validMove)
             {
                 position = newPosition;
                 rb.AddForce(direction*(int)(200*tileSize));
-            }//???????? 
-
+            }
+            
+            //Only one triangle with the highest powerLevel gets hit.
             HitStrongestTriangle(scoreIncrement*mult);
 
-
-            // giving negative score without the spotlight multiplier
+            // Giving negative score without the spotlight multiplier
             if(validMove)score += scoreIncrement*mult;
             else score += scoreIncrement;
 
-            scoreText.text = mult.ToString();
+            // Updating score and avarage
+            scoreText.text = position.ToString();
             gameController.avarage = score/((moveCount%16)+1);
         }
 
@@ -132,7 +137,6 @@ public class Player : MonoBehaviour
 
         foreach (Collider2D collider in colliders)
         {
-            // Instead of using GetComponent, use the SpotlightCache to get the spotlight reference
             SpotlightSquare spotlight;
 
             if (SpotlightSquare.cachedSpotlights.TryGetValue(collider.gameObject, out spotlight) && spotlight != null)
@@ -145,6 +149,7 @@ public class Player : MonoBehaviour
 
     private IEnumerator WrongMove(Vector2 direction)
     {
+        //Making the player move back and forth for a wrong move
         rb.AddForce(direction*(int)(200*tileSize));
 
         yield return new WaitForSeconds(beatTimer.beatInterval/4);
@@ -154,14 +159,11 @@ public class Player : MonoBehaviour
 
     private IEnumerator ResetAnimation(string animationName)
     {
-        // Get the runtime animator controller
         if(!takingDamage)animator.Play(animationName);
 
-        // Wait until the animation has finished playing
         yield return new WaitForSeconds(0.2f);
 
-        // Optionally, reset the animation to the default state
-        if(!takingDamage)animator.Play("idle"); // Replace "Idle" with the name of your default animation state
+        if(!takingDamage)animator.Play("idle");
     }
 
     private void HitStrongestTriangle(int damage)
@@ -175,8 +177,7 @@ public class Player : MonoBehaviour
         int maxPower = gameController.enemies.Max(t => t.powerLevel);
 
         // Find the first triangle with the maximum power level
-        var strongestTriangle = gameController.enemies
-            .FirstOrDefault(t => t.powerLevel == maxPower);
+        var strongestTriangle = gameController.enemies.FirstOrDefault(t => t.powerLevel == maxPower);
 
         // If a triangle is found, deal damage to it
         if (strongestTriangle != null)
@@ -190,7 +191,7 @@ public class Player : MonoBehaviour
         health -= damage;
         if (health <= 0)
         {
-            // Handle player death (e.g., end game, restart level)
+            // Handle player death
             Debug.Log("Player has died");
             gameController.OpenEndScreen();
         }
