@@ -15,7 +15,6 @@ public class BeatTimer : MonoBehaviour
     public float tolerance=0.04f;
     public BeatState State { get; set; }
     public bool play;
-    private bool levelFlag=false;
     public int beatCounter;
 
     void Awake()
@@ -28,7 +27,12 @@ public class BeatTimer : MonoBehaviour
     }
     void Start()
     {   
-        beatCounter=0;
+        Invoke("StartAfterDelay",beatInterval);
+    }
+
+    private void StartAfterDelay()
+    {
+        beatCounter=-1;
         play=true;
     }
 
@@ -37,11 +41,6 @@ public class BeatTimer : MonoBehaviour
         if(timeS!=1)Time.timeScale=1*timeS;
         CheckAction();
         timer += Time.deltaTime;
-    }
-
-    public void LoadLevelFlag()
-    {
-        levelFlag = true; 
     }
 
     private void PlayBack()
@@ -84,12 +83,13 @@ public class BeatTimer : MonoBehaviour
             {
                 if(beatCounter%16==0)
                 {
+                    print("inside%16");
+                    if(play)
+                    {
+                        PlayBack();
+                        play=false;
+                    }
                     PlayHand();
-                }
-                if(play)
-                {
-                    PlayBack();
-                    play=false;
                 }
             }
             backGround.color = Color.yellow;
@@ -105,11 +105,6 @@ public class BeatTimer : MonoBehaviour
         // Check for the beat action
         if (modTimer<=0.02f && modTimer>=0)
         {
-            if(levelFlag)
-            {
-                gameController.LoadLevel();
-                levelFlag=false;
-            }
             if(beatFlag)// to ensure beat happens only once per beatInterval 
             {
                 OnBeat?.Invoke();

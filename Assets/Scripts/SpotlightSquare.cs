@@ -16,6 +16,7 @@ public class SpotlightSquare: MonoBehaviour
     private List<Vector2Int> initialMoves = new List<Vector2Int>();
     private Rigidbody2D rb;
     [HideInInspector]public static Dictionary<GameObject, SpotlightSquare> cachedSpotlights = new Dictionary<GameObject, SpotlightSquare>();
+    [SerializeField]private List<int> gridBoundsSpotlight = new List<int>();
 
     public void Initialize(Vector2Int initialPosition, GameController controller, BeatTimer timer, int initialPowerLevel)
     {
@@ -27,7 +28,7 @@ public class SpotlightSquare: MonoBehaviour
         // Setting initial position
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         nextPosition = position;
-
+        gridBoundsSpotlight = gameController.gridBounds;
         spriteRenderer = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
         speed = gameController.tileSize / beatTimer.beatInterval;
@@ -66,6 +67,10 @@ public class SpotlightSquare: MonoBehaviour
             currentDirection = initialMoves[0];
             initialMoves.RemoveAt(0);
         }
+        else if(IsOutside())
+        {
+            currentDirection = GetDirectionTowardsGrid();
+        }
         else
         {
             currentDirection = GetRandomValidDirection();
@@ -88,6 +93,32 @@ public class SpotlightSquare: MonoBehaviour
     {
         powerLevel = powerLevel * (int)Mathf.Pow(2, numberOfSpotlights - 1);
         UpdateColor(); // Update the color based on the new power level
+    }
+
+    private bool IsOutside()
+    {
+        if (position.x < gridBoundsSpotlight[0] || position.x >= gridBoundsSpotlight[1] || position.y < gridBoundsSpotlight[2] || position.y >= gridBoundsSpotlight[3])
+        {
+            return true; // Out of bounds
+        }
+        else return false;
+    }
+
+    private Vector2Int GetDirectionTowardsGrid()
+    {
+        if (position.x <= gridBoundsSpotlight[0]-1) // Coming from the left
+        {
+            return Vector2Int.right;
+        }
+        else if (position.x >= gridBoundsSpotlight[1]) // Coming from the right
+        {
+            return Vector2Int.left;
+        }
+        else if (position.y >=  gridBoundsSpotlight[3]) // Coming from above
+        {
+            return Vector2Int.down;
+        }
+        else return Vector2Int.zero;
     }
 
     void UpdateColor()
@@ -168,7 +199,7 @@ public class SpotlightSquare: MonoBehaviour
 
     private bool IsValidMove(Vector2Int nextPosition)
     {
-        if (nextPosition.x < 0 || nextPosition.x >= gameController.width || nextPosition.y < 0 || nextPosition.y >= gameController.height)
+        if (nextPosition.x < gridBoundsSpotlight[0] || nextPosition.x >= gridBoundsSpotlight[1] || nextPosition.y < gridBoundsSpotlight[2] || nextPosition.y >= gridBoundsSpotlight[3])
         {
             return false; // Out of bounds
         }

@@ -29,7 +29,6 @@ public class cTriangle : MonoBehaviour
     public void StartNotVibing()
     {
         animator.Play("cTriangle_notVibing");
-        print("here");
     }
 
     public bool canNod=false;

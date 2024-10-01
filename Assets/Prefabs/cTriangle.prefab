@@ -12,10 +12,10 @@ GameObject:
   - component: {fileID: 4027999963485324227}
   - component: {fileID: 2699346662238692429}
   - component: {fileID: 1609540978595378375}
-  - component: {fileID: -55282422819424606}
+  - component: {fileID: 3066362748631618098}
   m_Layer: 0
   m_Name: cTriangle
-  m_TagString: Untagged
+  m_TagString: cTriangle
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -48,7 +48,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   beatTimer: {fileID: 0}
-  tRotation: 0
   canNod: 0
 --- !u!95 &2699346662238692429
 Animator:
@@ -123,8 +122,8 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!60 &-55282422819424606
-PolygonCollider2D:
+--- !u!61 &3066362748631618098
+BoxCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -152,10 +151,10 @@ PolygonCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: 0.5, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -165,18 +164,6 @@ PolygonCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Points:
-    m_Paths:
-    - - {x: -2.3, y: 2.6000001}
-      - {x: -3, y: 2.6000001}
-      - {x: -3.2, y: 2}
-      - {x: -2.5848522, y: 0.05492401}
-      - {x: -3.2, y: -1.5}
-      - {x: -3.1000001, y: -2.5}
-      - {x: -3, y: -2.6000001}
-      - {x: -2.3, y: -2.6000001}
-      - {x: 2, y: -0.35110778}
-      - {x: 2.1476681, y: -0.17322007}
-      - {x: 2.1651108, y: 0.11744509}
-      - {x: 1.773222, y: 0.47322005}
-  m_UseDelaunayMesh: 0
+  serializedVersion: 2
+  m_Size: {x: 1.65, y: 5}
+  m_EdgeRadius: 0

@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Common.Enums;
 using UnityEngine;
 using UnityEngine.Audio;
@@ -22,95 +24,138 @@ namespace Common.Enums
 public class GameController : MonoBehaviour
 {
     
-    public BeatState State;
-    [SerializeField]private GameObject filter;
-    [SerializeField]public int width=5;
-    [SerializeField]public int height=5; 
-    private SpriteRenderer filterSR;
-    public int waitSeconds=1;
-    AudioSource[] audioSources;  
-    [SerializeField]private GameObject healthPrefab;
-    public BeatTimer beatTimer;
-    public GameState currentState;
-    public GameObject[,] grid;
-    public GameObject[] health = new GameObject[100];
-    public GameObject tilePrefab; // Reference to the tile prefab
-    public GameObject trianglePrefab; // Reference to the triangle prefab
-    public GameObject spotLightPrefab;
-    public GameObject heartPrefab;
+    [HideInInspector]public BeatState State;
+    [SerializeField]private int levelNo=1;
+    [SerializeField]private float spotlightSpawnChance = 0.4f;
+    [SerializeField]private float heartSpawnChance = 0.05f;    
+    [SerializeField]private CrowdController crowdController;
+    [SerializeField]public int width;
+    [SerializeField]public int height;
+    [SerializeField]public List<int> gridBounds = new List<int>();// width lower(0)/upper(1), height lower(2)/upper(3) 
     public float tileSize = 8.0f;
+    [SerializeField]private int levelLoad5Wait=1;
+    [SerializeField]private AudioSource[] audioSources;  
+    [SerializeField]private BeatTimer beatTimer;
+    private GameState currentState;
+    private GameObject[,] grid;
+    [SerializeField]private GameObject tilePrefab; // Reference to the tile prefab
+    [SerializeField]private GameObject trianglePrefab; // Reference to the triangle prefab
+    [SerializeField]private GameObject spotLightPrefab;
+    [SerializeField]private GameObject heartPrefab;
+    [SerializeField]private GameObject endScreen;
+    [SerializeField]private GameObject filter;
+    private SpriteRenderer filterSR;
     public Player player;
-    public List<Triangle> enemies = new List<Triangle>();
-    public List<SpotlightSquare> spotlights = new List<SpotlightSquare>();
-    public List<GameObject> hearts = new List<GameObject>();
-    public SpectatorCrowd crowd;
-    public DJ dj;
-    public LevelManager levelManager;
-    public UIManager uiManager;
-    public AudioManager audioManager;
+    [HideInInspector]public List<Triangle> enemies = new List<Triangle>();
+    [HideInInspector]public List<SpotlightSquare> spotlights = new List<SpotlightSquare>();
+    private List<GameObject> hearts = new List<GameObject>();
     private int totalTrianglesToSpawn;
     private int trianglesSpawned;
     private int beatCounter = 0;
     private bool isSpawningEnemies = false; // Flag to track enemy spawning
-    [SerializeField]private int levelNo=1;
-    [SerializeField]private float spawnChance = 0.4f;
-    private float change;
-    [SerializeField]private CrowdController crowdController;
 
-    public GameObject endScreen;
     void Start()
     {
+        // Initializing the arena grid and Centering the camera
         grid = new GameObject[width, height];
+        gridBounds.Add(0);
+        gridBounds.Add(width);
+        gridBounds.Add(0);
+        gridBounds.Add(height);
         CenterCamera();
         InitializeGrid();
-        StartGame();
+        player.StartPlayer();
+        // Setting initial audio pitches
         audioSources = GetComponents<AudioSource>();
         for(int i = 0; i < 6; i++)
         {
             audioSources[i].Stop();
             audioSources[i].pitch = 0.8333f;
         }
+
         levelText.gameObject.SetActive(false);
         filterSR = filter.GetComponent<SpriteRenderer>();
-        change = Random.Range(0, 360);
+        colorChange = UnityEngine.Random.Range(0, 360);
         endScreen.SetActive(false);
         crowdController.Initialize(beatTimer,width,height,tileSize);
-        
 
         beatTimer.OnBeat += HandleBeat;
-        //Camera.main.fieldOfView = 100;
-    }
 
+        ChangeGridBounds();
+
+        getCrowdParents();
+
+        resizeCrowd();
+
+        StartGame();
+    }
     private bool canSpawn = true;
-    void HandleBeat()
+    void HandleBeat()// Handles all the checks happening once per beat
     {
 
         beatCounter++;
 
-        foreach (var enemy in enemies)
-        {
-            enemy.Move();
-        }
+        StartCoroutine(HandleBeatCoroutine());
         
         foreach (var spotlight in spotlights)
         {
-            if(beatCounter%2==0)spotlight.Move();
+            if(beatCounter%2==0)spotlight.Move();// Spotlights move once per 2 beats since their speed is halved
         }
 
-        if (beatCounter % 2 == 0 && isSpawningEnemies)
+        if (isSpawningEnemies)
         {
             if(canSpawn)SpawnRemainingEnemies();
         }
 
         if(enemies.Count == 0 && !isSpawningEnemies)
         {
-            beatTimer.LoadLevelFlag();
+            LoadLevel();// Load level if only there are no enemies present and none will be spawned
+            ChangeGridBounds();
         }
 
         HandleMerging();
         HandleSpotlightMerging();
         SwitchColor();
     }
+
+    IEnumerator HandleBeatCoroutine()
+    {
+        List<Triangle> trianglesToRemove = new List<Triangle>();
+
+        // Iterate over a copy of the list to avoid modifying the collection during iteration
+        var enemiesCopy = new List<Triangle>(enemies);
+
+        foreach (var enemy in enemiesCopy)
+        {
+            if (enemy != null)
+            {
+                enemy.Move(); // Make enemies move with the beat
+
+                // Check if this enemy should be removed (health check or any other condition)
+                if (enemy.health <= 0)
+                {
+                    trianglesToRemove.Add(enemy);
+                }
+            }
+            yield return null;
+        }
+
+        // Now safely remove the destroyed triangles
+        foreach (var enemy in trianglesToRemove)
+        {
+            RemoveEnemy(enemy); // Your existing method to remove enemies
+        }
+
+        // After all enemies have moved, handle grid bounds change if needed
+        if (gridBoundsFlag)
+        {
+            ChangeGridBounds();
+            gridBoundsFlag = false;
+        }
+    }
+
+
+    // Updates the triangle that is chaing the player according to the powe level of the triangle
     public void UpdateChasingTriangle()
     {
         Triangle highestPowerTriangle = null;
@@ -130,11 +175,10 @@ public class GameController : MonoBehaviour
             highestPowerTriangle.isChasingPlayer = true;
     }
 
-
-    public int avarage;
+    public int avarage;// To keep track of how good the player is doing
     public void PlayHand()
     {   
-        //avarage = 200;
+        // Plays different hands(beats) according to both the avarage of the player and the current level no.
         print("avarage: " + avarage);
         if(avarage<100)
         {
@@ -174,32 +218,26 @@ public class GameController : MonoBehaviour
         } 
     }
 
-    public void LessNodders(int no)
-    {
-        crowdController.LessNodders(no);
-    }
-
     public void PlayBack()
     {
         audioSources[0].Play();
     }
 
+    public void LessNodders(int no)
+    {
+        crowdController.LessNodders(no);
+    }
+
     private bool flag5=true;
     public void LoadLevel()
     {
-        if(((levelNo+1)%5)==0 && flag5)
+        levelNo++;
+        if((levelNo%5)==0 && flag5)
         {   
-            levelNo++;
             flag5 = false;
             StartCoroutine(Load5());
             flag5 = true;
         }
-
-        else if (flag5)
-        {
-            levelNo++;
-        }
-
         totalTrianglesToSpawn = levelNo;
         trianglesSpawned = 0;
         isSpawningEnemies = true;
@@ -210,11 +248,11 @@ public class GameController : MonoBehaviour
         canSpawn=false;
         OpenLevelText();
         StopMusic();
-        yield return new WaitForSeconds(waitSeconds/3);
+        yield return new WaitForSeconds(levelLoad5Wait);
         ChangePitch();
         CloseLevelText();
         StartMusic();
-        yield return new WaitForSeconds(waitSeconds);
+        yield return new WaitForSeconds(levelLoad5Wait/2);
         canSpawn=true;
     }
 
@@ -234,6 +272,7 @@ public class GameController : MonoBehaviour
 
     private void ChangePitch()
     {
+        // Different beat intervals and pitches are set according to the level no.
         if(levelNo == 5)
         {
             beatTimer.beatInterval = 0.571f;
@@ -300,7 +339,6 @@ public class GameController : MonoBehaviour
         }
     }
 
-    [SerializeField]private GameController levelShower;
     [SerializeField]private Text levelText;
     private void OpenLevelText()
     {
@@ -312,11 +350,11 @@ public class GameController : MonoBehaviour
         levelText.gameObject.SetActive(false);
     }
 
-    void SwitchColor()
+    void SwitchColor()// To chage the arena grid's color randomly each beat
     {
-        for(int x = 0; x<width-1; x++)
+        for(int x = 0; x<width; x++)
         {
-            for (int y = 0; y<height-1; y++)
+            for (int y = 0; y<height; y++)
             {
                 grid[x,y].GetComponent<SpriteRenderer>().color =  GetRandomColor();
             }
@@ -325,13 +363,13 @@ public class GameController : MonoBehaviour
 
     private Color GetRandomColor()
     {
-        float r = Random.Range(0f, 1f);
-        float g = Random.Range(0f, 1f);
-        float b = Random.Range(0f, 1f);
+        float r = UnityEngine.Random.Range(0f, 1f);
+        float g = UnityEngine.Random.Range(0f, 1f);
+        float b = UnityEngine.Random.Range(0f, 1f);
         return new Color(r, g, b);
     }
 
-    void HandleMerging()
+    void HandleMerging()// Maybe change it so that it works with colliders instead?????????
     {
         var mergeGroups = new Dictionary<Vector2Int, List<Triangle>>();
 
@@ -379,7 +417,7 @@ public class GameController : MonoBehaviour
     }
 
 
-    void HandleSpotlightMerging()
+    void HandleSpotlightMerging()// Maybe change it so that it works with colliders instead?????????
     {
         var mergeGroups = new Dictionary<Vector2Int, List<SpotlightSquare>>();
 
@@ -466,8 +504,8 @@ public class GameController : MonoBehaviour
 
     void CenterCamera()
     {
+        //Centers the camera to have same positioning ratios in different devices
         float centerX = (width * tileSize - tileSize) / 2.0f;
-        float centerY = (height * tileSize - tileSize) / 2.0f;
 
         float yScreenPosition = Screen.height * 0.35f;
         Vector3 worldPosition = Camera.main.ScreenToWorldPoint(new Vector3(0, yScreenPosition, Camera.main.nearClipPlane));
@@ -487,30 +525,102 @@ public class GameController : MonoBehaviour
         {
             for (int y = 0; y < height; y++)
             {
-                /*if(y == 0 )
-                {
-                    grid[x, y] = Instantiate(tilePrefab, new Vector2(x * tileSize, y * tileSize+(tileSize/4)), Quaternion.identity);
-                    grid[x, y].transform.localScale = new Vector3(tileSize, tileSize/2, 1);
-                    grid[x, y].name = $"Tile_{x}_{y}";
-                    if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
-                    grid[x,y].transform.parent = parent.transform;
-                }*///Used to make the small tiles of the player for the 1D mode. Probably not necessary.
-
                 grid[x, y] = Instantiate(tilePrefab, new Vector2(x * tileSize, y * tileSize), Quaternion.identity);
                 grid[x, y].transform.localScale = new Vector3(tileSize, tileSize, 1);
                 grid[x, y].name = $"Tile_{x}_{y}";
                 if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
                 grid[x,y].transform.parent = parent.transform;
-                
+            }
+        }
+    }
+
+    void ResizeGrid(int newWidth, int newHeight)
+    {
+        // Calculate the grid center based on the original width and height
+        float centerX = (width * tileSize) / 2.0f;
+        float centerY = (height * tileSize) / 2.0f;
+
+        // Calculate the boundaries of the new grid dimensions
+        float newCenterX = (newWidth * tileSize) / 2.0f;
+        float newCenterY = (newHeight * tileSize) / 2.0f;
+
+        // Iterate through the grid to activate/deactivate tiles
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                // Calculate the current tile's position relative to the center
+                float tileXPos = (x * tileSize) + tileSize / 2.0f;
+                float tileYPos = (y * tileSize) + tileSize / 2.0f;
+
+                // Determine if this tile is within the new width and height bounds
+                bool isWithinBoundsX = Mathf.Abs(tileXPos - centerX) <= newCenterX;
+                bool isWithinBoundsY = Mathf.Abs(tileYPos - centerY) <= newCenterY;
+
+                if (isWithinBoundsX && isWithinBoundsY)
+                {
+                    // Activate the tile
+                    grid[x, y].SetActive(true);
+                }
+                else
+                {
+                    // Deactivate the tile
+                    grid[x, y].SetActive(false);
+                }
             }
         }
 
-        /*for(int i = 0; i<46; i++)
+        width = newWidth;
+        height = newHeight;
+    }
+
+    private int maxX;
+    private int maxY;
+    private int minX;
+    private int minY;
+
+    private void ChangeGridBounds()
+    {
+        print("hwy");
+        if (gridBounds.Count < 4)
         {
-            health[i] = Instantiate(healthPrefab, new Vector2(-6, -2.5f+(i*1)), Quaternion.identity);
-            health[i].transform.Rotate(0,0,90);
-            health[i].transform.localScale = new Vector3(1.2f,1.2f,1);
-        }*///older version of the helath bar.
+            Debug.LogError("GridBounds list does not contain enough elements!");
+            return;
+        }
+
+        if(enemies.Count==0)
+        {
+            gridBounds[0] = 0;
+            gridBounds[1] = 7; 
+            gridBounds[2] = 0; 
+            gridBounds[3] = 7;
+        }
+
+        else
+        {
+            maxX=Math.Max(enemies.Max(enemy => enemy.position.x),player.position.x);
+            maxY=Math.Max(enemies.Max(enemy => enemy.position.y),player.position.y);
+            minX=Math.Min(enemies.Min(enemy => enemy.position.x),player.position.x);
+            minY=Math.Min(enemies.Min(enemy => enemy.position.y),player.position.y);
+
+            if(maxX<width-2 && minX>1 && maxY<height-2 && minY>1)
+            {
+                //??????? Her şeyin 3 e 3 den büyük olduğuna emin olmak lazım
+                gridBounds[0] = 2;
+                gridBounds[1] = 5; 
+                gridBounds[2] = 2; 
+                gridBounds[3] = 5;
+            }
+            else if(maxX<width-1 && minX>0 && maxY<height-1 && minY>0)
+            {
+                //??????? Her şeyin 3 e 3 den büyük olduğuna emin olmak lazım
+                gridBounds[0] = 1;
+                gridBounds[1] = 6; 
+                gridBounds[2] = 1; 
+                gridBounds[3] = 6;
+            }
+        }
+
     }
 
     void StartGame()
@@ -518,21 +628,8 @@ public class GameController : MonoBehaviour
         ChangeState(GameState.Play);
         totalTrianglesToSpawn = levelNo;
         trianglesSpawned = 0;
-        //(1);
-        SpawnInitialEnemies(); // Ensure enemies are spawned when the game starts
-        UpdateChasingTriangle();
-    }
-
-    void SpawnInitialEnemies()
-    {
-        int spawnCount = Mathf.Min(6, totalTrianglesToSpawn - trianglesSpawned);
-        SpawnEnemies(spawnCount);
-
-        // Set the flag to true if there are more triangles to spawn
-        if (totalTrianglesToSpawn > 6)
-        {
-            isSpawningEnemies = true;
-        }
+        isSpawningEnemies = true;
+        SpawnRemainingEnemies(); // Ensure enemies are spawned when the game starts
     }
 
     void SpawnRemainingEnemies()
@@ -560,11 +657,13 @@ public class GameController : MonoBehaviour
     void PauseGame()
     {
         ChangeState(GameState.Pause);
+        Time.timeScale = 0;
     }
 
     void ResumeGame()
     {
         ChangeState(GameState.Play);
+        Time.timeScale = 1;
     }
 
     void EndGame()
@@ -572,51 +671,37 @@ public class GameController : MonoBehaviour
         ChangeState(GameState.End);
     }
 
+    [SerializeField]private bool resizeFlag=false;
+    [SerializeField]private bool gridBoundsFlag=false;
     void Update()
     {
         if (currentState == GameState.Play)
         {
             player.HandleInput();
-            MoveActors();
-            CheckCollisions();
-            UpdateUI();
             FilterColor();
+        }
+        if(resizeFlag)
+        {    
+            ResizeGrid(5,5);
+            resizeFlag=false;
         }
     }
 
+    private float colorChange;
     private void FilterColor()
     {
-        change += Time.deltaTime;
-        float val = (change%360)/360;
+        colorChange += Time.deltaTime;
+        float val = (colorChange%360)/360;
         Color color = Color.HSVToRGB(val,0.75f,1); 
         color.a = 0.8f;
         filterSR.color = color;
     }
 
-    void HandleInput()
-    {
-    }
-
-    void CheckCollisions()
-    {
-    }
-
-    void MoveActors()
-    {
-    }
-
-
-    void GenerateLevel()
-    {
-    }
-
     private int nameCounter = 0;
-
     void SpawnEnemies(int spawnCount)
     {
         HashSet<Vector2Int> occupiedPositions = new HashSet<Vector2Int>();
 
-        // Add the player's current position to occupied positions
         occupiedPositions.Add(player.position);
 
         for (int i = 0; i < spawnCount; i++)
@@ -645,7 +730,7 @@ public class GameController : MonoBehaviour
         float randomValue = UnityEngine.Random.Range(0f, 1f);
 
         // Check if the random value is less than the spawn chance
-        if (randomValue <= spawnChance)
+        if (randomValue <= spotlightSpawnChance)
         {
             GameObject spotlightObject = Instantiate(spotLightPrefab, new Vector2(position.x * tileSize, position.y * tileSize), Quaternion.identity);
             SpotlightSquare spotlight = spotlightObject.GetComponent<SpotlightSquare>();
@@ -653,25 +738,10 @@ public class GameController : MonoBehaviour
             addSpotlight(spotlight);
         }
 
-        if (randomValue >= 0.95f)
+        if (randomValue >= 1-heartSpawnChance)
         {
             GameObject heartObject = Instantiate(heartPrefab, new Vector2(position.x * tileSize, position.y * tileSize), Quaternion.identity);
             hearts.Add(heartObject);
-        }
-    }
-
-    public void CheckPlayerHeartCollision()
-    {
-        foreach (var heart in hearts)
-        {
-            Vector2Int heartPosition = Vector2Int.RoundToInt(new Vector2(heart.transform.position.x / tileSize, heart.transform.position.y / tileSize));
-
-            if (player.position == heartPosition)
-            {
-                // Player is on the same tile as the heart
-                CollectHeart(heart);
-                break;
-            }
         }
     }
 
@@ -699,28 +769,28 @@ public class GameController : MonoBehaviour
         Vector2Int playerPos = player.position;
 
         // Generate positions outside the grid, excluding the bottom side
-        for (int y = 0; y < height; y++)
+        for (int y = 1; y < gridBounds[3]; y++)
         {
-            if (playerPos.x != 0)
+            if (playerPos.x != gridBounds[0])
             {
-                Vector2Int leftPosition = new Vector2Int(-1, y); // Left side
+                Vector2Int leftPosition = new Vector2Int(gridBounds[0]-1, y); // Left side
                 if (!occupiedPositions.Contains(leftPosition))
                     possiblePositions.Add(leftPosition);
             }
 
-            if (playerPos.x != width - 1)
+            if (playerPos.x != gridBounds[1] - 1)
             {
-                Vector2Int rightPosition = new Vector2Int(width, y); // Right side
+                Vector2Int rightPosition = new Vector2Int(gridBounds[1], y); // Right side
                 if (!occupiedPositions.Contains(rightPosition))
                     possiblePositions.Add(rightPosition);
             }
         }
 
-        for (int x = 0; x < width; x++)
+        for (int x = 0; x < gridBounds[1]; x++)
         {
-            if (playerPos.y != height - 1)
+            if (playerPos.y != gridBounds[3] - 1)
             {
-                Vector2Int topPosition = new Vector2Int(x, height); // Top side
+                Vector2Int topPosition = new Vector2Int(x, gridBounds[3]); // Top side
                 if (!occupiedPositions.Contains(topPosition))
                     possiblePositions.Add(topPosition);
             }
@@ -731,47 +801,8 @@ public class GameController : MonoBehaviour
             return Vector2Int.zero; // No valid position found
         }
 
-        int randIndex = Random.Range(0, possiblePositions.Count);
+        int randIndex = UnityEngine.Random.Range(0, possiblePositions.Count);
         return possiblePositions[randIndex];
-    }
-
-    List<Vector2Int> GetExcludedPositions(Vector2Int playerPos)
-    {
-        List<Vector2Int> excludedPositions = new List<Vector2Int>();
-
-        // Determine the side(s) closest to the player
-        int minDistanceToEdge = Mathf.Min(playerPos.x, 5 - playerPos.x, playerPos.y, 5 - playerPos.y);
-
-        if (playerPos.y == 5 - minDistanceToEdge)
-        {
-            for (int x = 0; x < 6; x++)
-            {
-                excludedPositions.Add(new Vector2Int(x, 6)); // Exclude top row spawns
-            }
-        }
-        if (playerPos.y == minDistanceToEdge)
-        {
-            for (int x = 0; x < 6; x++)
-            {
-                excludedPositions.Add(new Vector2Int(x, -1)); // Exclude bottom row spawns
-            }
-        }
-        if (playerPos.x == minDistanceToEdge)
-        {
-            for (int y = 0; y < 6; y++)
-            {
-                excludedPositions.Add(new Vector2Int(-1, y)); // Exclude left column spawns
-            }
-        }
-        if (playerPos.x == 5 - minDistanceToEdge)
-        {
-            for (int y = 0; y < 6; y++)
-            {
-                excludedPositions.Add(new Vector2Int(6, y)); // Exclude right column spawns
-            }
-        }
-
-        return excludedPositions;
     }
 
     public void RemoveEnemy(Triangle enemy)
@@ -781,6 +812,7 @@ public class GameController : MonoBehaviour
             SpawnSpotlight_Heart(enemy.position, enemy.powerLevel);
             enemies.Remove(enemy);
             UpdateChasingTriangle();
+            gridBoundsFlag=true;
         }
     }
 
@@ -792,42 +824,6 @@ public class GameController : MonoBehaviour
         }
     }
 
-
-    void UpdateUI()
-    {
-        //uiManager.UpdateUI();
-    }
-
-    void ShowGameUI()
-    {
-    }
-
-    void ShowPauseMenu()
-    {
-    }
-
-    void ShowGameOverScreen()
-    {
-    }
-
-    void PlayMusic()
-    {
-        //audioManager.PlayMusic();
-    }
-
-    void PlaySoundEffect(string effectName)
-    {
-        //audioManager.PlaySoundEffect(effectName);
-    }
-
-    public void OnPlayerScoreUpdated()
-    {
-    }
-
-    void OnEnemyDefeated(Triangle enemy)
-    {
-    }
-
     public void Retry()
     {
         SceneManager.LoadScene("Game");
@@ -837,6 +833,47 @@ public class GameController : MonoBehaviour
     public void OpenEndScreen()
     {
         endScreen.SetActive(true);
+    }
+
+    public List<int> ReturnGridbounds()
+    {
+        List<int> tempBounds = new List<int>();
+        print("herehere");
+        for(int i=0; i<4; i++)
+        {
+            print("herein");
+            tempBounds.Add(gridBounds[i]);
+        }
+        return tempBounds;
+    }
+
+    private GameObject leftCrowd;
+    private GameObject rightCrowd;
+    private Vector2 leftCrowdPos;
+    private Vector2 rightCrowdPos;
+    public void getCrowdParents()
+    {
+        leftCrowd = crowdController.crowdParentLeft;
+        rightCrowd = crowdController.crowdParentRight;
+
+        leftCrowdPos = leftCrowd.transform.position;
+        rightCrowdPos = rightCrowd.transform.position;
+    }
+
+    private void resizeCrowd()
+    {
+        if(gridBounds[1] == width)
+        {
+            leftCrowd.transform.position = leftCrowdPos;
+            rightCrowd.transform.position = rightCrowdPos;
+        }
+        else
+        {
+            leftCrowd.transform.position = leftCrowd.transform.position + new Vector3(tileSize*gridBounds[0], 0,0);
+            print(leftCrowd.transform.position);
+            rightCrowd.transform.position = rightCrowd.transform.position - new Vector3(tileSize*(width-gridBounds[1]), 0,0);
+            print(rightCrowd.transform.position);
+        }
     }
 
 }

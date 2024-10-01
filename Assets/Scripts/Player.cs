@@ -4,10 +4,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using Common.Enums;
+using UnityEditor.Animations;
 
 public class Player : MonoBehaviour
 {
     [SerializeField]private Text scoreText;
+    [SerializeField]private Text beatStateText;
     public int score;
     private int maxHealth=100;
     public int health; // Player starting health
@@ -15,23 +17,33 @@ public class Player : MonoBehaviour
     private GameController gameController; // Reference to GameController
     private BeatTimer beatTimer;
     private Animator animator;
+    private Animator beatStateAnimator;
     private Rigidbody2D rb;
     public BeatState State { get; set; }
     private float tileSize;
     public LayerMask spotlightLayer;
-
+    private Vector2Int currentDirection;
+    //[SerializeField]private List<int> gridBounds = new List<int>();// width lower(0)/upper(1), height lower(2)/upper(3)
+    [SerializeField]private List<int> gridBoundsPlayer = new List<int>();// width lower(0)/upper(1), height lower(2)/upper(3)
     void Start()
+    {
+
+    }
+    public void StartPlayer()
     {
         // GameController and BeatTimer scripts
         gameController = GameObject.Find("GameController").GetComponent<GameController>();
         beatTimer = GameObject.Find("GameController").GetComponent<BeatTimer>();
-
+        // Setting the initial bounds for movement.
         tileSize = gameController.tileSize;
+        gridBoundsPlayer = gameController.ReturnGridbounds();
+        //Nasıl deep coy olmadan kopşyalıyıcam
         // Starting position at the bottom-middle tile
         position = new Vector2Int(((gameController.width+1)/2)-1,0);
         transform.position = new Vector2(position.x * tileSize, position.y * tileSize);
         // Starting animation
         animator = GetComponent<Animator>();
+        beatStateAnimator = beatStateText.GetComponent<Animator>();
         animator.Play("idle");
 
         rb = GetComponent<Rigidbody2D>();
@@ -50,6 +62,8 @@ public class Player : MonoBehaviour
     {
         Vector2Int newPosition;
         State = beatTimer.State;
+        currentDirection = direction;// To use later if the player walks into a triangle.
+        crowdPushFlag = true;
 
         bool validMove=true;
 
@@ -63,7 +77,7 @@ public class Player : MonoBehaviour
         else newPosition = position;
 
         // Check if the new position is within the grid bounds
-        if (newPosition.x >= 0 && newPosition.x < gameController.width && newPosition.y >= 0 && newPosition.y < gameController.height)
+        if (newPosition.x >= gridBoundsPlayer[0] && newPosition.x < gridBoundsPlayer[1] && newPosition.y >= gridBoundsPlayer[2] && newPosition.y < gridBoundsPlayer[3])
         {
             int scoreIncrement = 0;
             CheckForSpotlightCollision();// Find out how much mult is.
@@ -73,29 +87,35 @@ public class Player : MonoBehaviour
                 if (State == BeatState.PerfectBeat)
                 {
                     scoreIncrement = 200; // Perfect score threshold
+                    beatStateText.text = "S";
                 }
                 else if (State == BeatState.CloseBeat)
                 {
                     scoreIncrement = 150; // Close score threshold
+                    beatStateText.text = "A";
                 }
                 else if (State == BeatState.MiddleBeat)
                 {
                     scoreIncrement = 100; // Middle score threshold
+                    beatStateText.text = "B";
                 }
                 else if (State == BeatState.FarBeat)
                 {
                     scoreIncrement = 50; // Far score threshold
+                    beatStateText.text = "C";
                 }
                 else if (State == BeatState.OffBeat)
                 {
                     // Moving during off beat is punishing.
                     scoreIncrement=-400;// Make a large score deduction.
+                    beatStateText.text = "F";
                     gameController.LessNodders(50);// Decrease the number of cTriangles Nodding.
                     StartCoroutine(WrongMove(direction));
                 }
                 else
                 {
                     scoreIncrement = 0;
+                    beatStateText.text = "WTF";
                 }
 
             }
@@ -116,6 +136,7 @@ public class Player : MonoBehaviour
 
             // Updating score and avarage
             scoreText.text = position.ToString();
+            beatStateAnimator.Play("BeatStateText",-1,0f);
             gameController.avarage = score/((moveCount%16)+1);
         }
 
@@ -188,15 +209,19 @@ public class Player : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
-        health -= damage;
-        if (health <= 0)
+        if(!takingDamage)
         {
-            // Handle player death
-            Debug.Log("Player has died");
-            gameController.OpenEndScreen();
-        }
+            health -= damage;
+            Move(-currentDirection);
+            if (health <= 0)
+            {
+                // Handle player death
+                Debug.Log("Player has died");
+                gameController.OpenEndScreen();
+            }
 
-        StartCoroutine(DamageTaken());
+            StartCoroutine(DamageTaken());
+        }
     }
 
     private bool takingDamage = false;
@@ -211,6 +236,7 @@ public class Player : MonoBehaviour
         takingDamage=false;
     }
 
+    private bool crowdPushFlag=true;
     void OnTriggerEnter2D(Collider2D other)
     {
         if(other.CompareTag("Triangle"))

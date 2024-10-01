@@ -8,6 +8,7 @@ TagManager:
   - Spotlight
   - Triangle
   - Tile
+  - cTriangle
   layers:
   - Default
   - TransparentFX

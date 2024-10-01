@@ -8,7 +8,8 @@ public class Triangle : MonoBehaviour
     [SerializeField]private GameObject spotlightPrefab;
     [SerializeField]private int baseHealth=200;
     [HideInInspector]public int health;
-    [SerializeField]private float speed;    
+    [SerializeField]private float speed;
+    [SerializeField]private List<int> gridBounds = new List<int>();// width lower(0)/upper(1), height lower(2)/upper(3)    
     [HideInInspector]public Vector2Int position;
     [HideInInspector]public Vector2Int previousPosition; // To track the previous position
     [HideInInspector]public GameController gameController; // Reference to GameController
@@ -35,6 +36,8 @@ public class Triangle : MonoBehaviour
         // Positioning in the correct initial position
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         nextPosition = position;
+        // Set initial grid bounds
+        gridBounds = gameController.gridBounds;
 
         audioSource = GetComponent<AudioSource>();
         spriteRenderer = GetComponent<SpriteRenderer>();
@@ -47,11 +50,6 @@ public class Triangle : MonoBehaviour
         animator = GetComponent<Animator>();
         childAnimator = transform.GetChild(0).GetComponent<Animator>();
         animator.Play("Triangle_Idle");
-        if (childAnimator != null)
-        {
-            bool hasState = childAnimator.HasState(0, Animator.StringToHash("Triangle_Damage_Idle"));
-            Debug.Log("Animator has Triangle_Damage_Idle: " + hasState);
-        }
         childAnimator.Play("Triangle_Damage_Idle");
         // Adding each triangle to a static cache to use during collision checks in the player script
         if (!cachedTriangles.ContainsKey(gameObject))
@@ -90,6 +88,10 @@ public class Triangle : MonoBehaviour
         {
             // Stop the movement after half-beat
             rb.velocity = Vector2.zero;
+            if(position.y == 0)
+            {
+                Move();
+            }
         }
 
         moveTimer += Time.deltaTime;
@@ -107,42 +109,46 @@ public class Triangle : MonoBehaviour
     // A function to make sure the triangle initially moves to the inside of the arena 
     public void SetInitialMoves()
     {
-        if (position.y ==  gameController.height) // Coming from above
-        {
-            initialMoves.Add(Vector2Int.down);
-            initialMoves.Add(Vector2Int.down);
-        }
-        else if (position.y == -1) // Coming from below
-        {
-            initialMoves.Add(Vector2Int.up);
-            initialMoves.Add(Vector2Int.up);
-        }
-        else if (position.x == -1) // Coming from the left
+        if (position.x <= gridBounds[0]-1) // Coming from the left
         {
             initialMoves.Add(Vector2Int.right);
             //initialMoves.Add(Vector2Int.right);
         }
-        else if (position.x == gameController.width) // Coming from the right
+        else if (position.x >= gridBounds[1]) // Coming from the right
         {
             initialMoves.Add(Vector2Int.left);
             //initialMoves.Add(Vector2Int.left);
+        }
+        else if (position.y <= gridBounds[2]-1) // Coming from below
+        {
+            initialMoves.Add(Vector2Int.up);
+            initialMoves.Add(Vector2Int.up);
+        }
+        else if (position.y >=  gridBounds[3]) // Coming from above
+        {
+            initialMoves.Add(Vector2Int.down);
+            initialMoves.Add(Vector2Int.down);
         }
     }
     public void DecideNextMove()
     {
         // Makes sure the triangles leave the area from the bottom
-        if(position.y == 0)
+        if(position.y == gridBounds[2])
         {
             currentDirection = Vector2Int.down;
-        }
-        else if (isChasingPlayer)
-        {
-            currentDirection = GetDirectionTowardsPlayer();
         }
         else if (initialMoves.Count > 0)
         {
             currentDirection = initialMoves[0];
             initialMoves.RemoveAt(0);
+        }
+        else if(IsOutside())
+        {
+            currentDirection = GetDirectionTowardsGrid();
+        }
+        else if (isChasingPlayer)
+        {
+            currentDirection = GetDirectionTowardsPlayer();
         }
         else
         {
@@ -179,13 +185,31 @@ public class Triangle : MonoBehaviour
         return GetRandomValidDirectionDown(); // Fallback to random move if the direct path is blocked
     }
 
+    private Vector2Int GetDirectionTowardsGrid()
+    {
+        print("trying");
+        if (position.x <= gridBounds[0]-1) // Coming from the left
+        {
+            return Vector2Int.right;
+        }
+        else if (position.x >= gridBounds[1]) // Coming from the right
+        {
+            return Vector2Int.left;
+        }
+        else if (position.y >=  gridBounds[3]) // Coming from above
+        {
+            return Vector2Int.down;
+        }
+        else return Vector2Int.zero;
+    }
+
 
     public void Move()
     {
         // Teleports triangle to the top of the column if they reach the bottom
-        if(position.y == 0)
+        if(position.y <= gridBounds[2])
         {
-            nextPosition.y = gameController.height-1;
+            nextPosition.y = gridBounds[3]-1;
         }
 
         canMove=true;
@@ -302,7 +326,7 @@ public class Triangle : MonoBehaviour
     // Checks if the move is valid
     private bool IsValidMove(Vector2Int nextPosition)
     {
-        if (nextPosition.x < 0 || nextPosition.x >= gameController.width || nextPosition.y < 0 || nextPosition.y >= gameController.height)
+        if (nextPosition.x < gridBounds[0] || nextPosition.x >= gridBounds[1] || nextPosition.y < gridBounds[2] || nextPosition.y >= gridBounds[3])
         {
             return false; // Out of bounds
         }
@@ -315,6 +339,14 @@ public class Triangle : MonoBehaviour
             }
         }
         return true;
+    }
+    private bool IsOutside()
+    {
+        if (position.x < gridBounds[0] || position.x >= gridBounds[1] || position.y < gridBounds[2] || position.y >= gridBounds[3])
+        {
+            return true; // Out of bounds
+        }
+        else return false;
     }
 
     public void RotateTowardsDirection(Vector2Int direction)

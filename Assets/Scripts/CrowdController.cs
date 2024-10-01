@@ -7,6 +7,10 @@ public class CrowdController : MonoBehaviour
     [SerializeField]private GameObject trianglePrefab;
     [SerializeField]private int xOffset;
     [SerializeField]private int yOffset;
+    public GameObject crowdParentLeft;
+    public GameObject crowdParentRight;
+    public GameObject crowdParentBottom;
+    public GameObject crowdParentTop;
     private List<GameObject> crowd;
     void Start()
     {
@@ -15,6 +19,10 @@ public class CrowdController : MonoBehaviour
     // Initialized after GameController
     public void Initialize(BeatTimer beatTimer,int width,int height,float tileSize)
     {
+        crowdParentLeft = new GameObject("CrowdLeft");
+        crowdParentRight = new GameObject("CrowdRight");
+        crowdParentBottom = new GameObject("CrowdBottom");
+        crowdParentTop = new GameObject("CrowdTop");
         crowd = new List<GameObject>();
         SpawnCrowd(beatTimer,width,height,tileSize);
     }
@@ -27,15 +35,16 @@ public class CrowdController : MonoBehaviour
 
     private void SpawnCrowd(BeatTimer beatTimer,int width,int height, float tileSize)
     {   
+
         // Determines how wide and tall the crowd will be
-        int xLenght = (int)(width*tileSize)/4;
-        int yLenght = (int)(height*tileSize) + 5;
+        int xLength = (int)(width*tileSize)/4;
+        int yLength = (int)(height*tileSize) + 5;
 
         // Spawns columns until the desired width is reached
-        for (int i = 0; i < xLenght/xOffset; i++)
+        for (int i = 0; i < xLength/xOffset; i++)
         {   
             // Fills each column with triangles from top to bottom
-            for (int j = 0; j < yLenght/yOffset; j++)
+            for (int j = 0; j < yLength/yOffset; j++)
             {
                 // Position of individual left triangles according to the offsets
                 float xPos = -(i*xOffset)-(tileSize*0.75f);
@@ -43,6 +52,23 @@ public class CrowdController : MonoBehaviour
                 if(i%2==1)yPos+=yOffset/2;
                 GameObject triangle = Instantiate(trianglePrefab,new Vector3( xPos, yPos, 0), Quaternion.identity);
                 triangle.GetComponent<SpriteRenderer>().sortingOrder = (int)(1000-xPos);
+                triangle.transform.SetParent(crowdParentLeft.transform);
+                crowd.Add(triangle);
+
+                xPos = -(i*xOffset)-(tileSize*0.75f);
+                yPos = (j*yOffset)-(tileSize*0.75f);
+                if(i%2==1)yPos+=yOffset/2;
+                triangle = Instantiate(trianglePrefab,new Vector3( xPos, yPos, 0), Quaternion.identity);
+                triangle.GetComponent<SpriteRenderer>().sortingOrder = (int)(1000-xPos);
+                triangle.transform.SetParent(crowdParentBottom.transform);
+                crowd.Add(triangle);
+
+                xPos = -(i*xOffset)-(tileSize*0.75f);
+                yPos = (j*yOffset)-(tileSize*0.75f);
+                if(i%2==1)yPos+=yOffset/2;
+                triangle = Instantiate(trianglePrefab,new Vector3( xPos, yPos, 0), Quaternion.identity);
+                triangle.GetComponent<SpriteRenderer>().sortingOrder = (int)(1000-xPos);
+                triangle.transform.SetParent(crowdParentTop.transform);
                 crowd.Add(triangle);
 
                 // Position of individual right triangles according to the offsets
@@ -50,11 +76,19 @@ public class CrowdController : MonoBehaviour
                 yPos = (j*yOffset)-(tileSize*0.75f);
                 if(i%2==1)yPos+=yOffset/2;
                 triangle = Instantiate(trianglePrefab,new Vector3( xPos, yPos, 0), Quaternion.identity);
-                triangle.transform.eulerAngles = new Vector3(0,180,0);
+                triangle.transform.eulerAngles = new Vector3(0,0,180);
                 triangle.GetComponent<SpriteRenderer>().sortingOrder = (int)(1000+xPos);
+                triangle.transform.SetParent(crowdParentRight.transform);
                 crowd.Add(triangle);
+
+
+                crowdParentBottom.transform.position = new Vector3((width-1)*tileSize/2,-10 ,0);
+                crowdParentTop.transform.position = new Vector3((width-1)*tileSize/2,((height-1)*tileSize)+10 ,0);
+
+                
             }
         }
+
 
         SelectInitialNodders();
 
