@@ -37,7 +37,7 @@ public class Triangle : MonoBehaviour
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         nextPosition = position;
         // Set initial grid bounds
-        gridBounds = gameController.gridBounds;
+        gridBounds = GameController.gridBounds;
 
         audioSource = GetComponent<AudioSource>();
         spriteRenderer = GetComponent<SpriteRenderer>();

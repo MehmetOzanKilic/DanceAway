@@ -39,7 +39,7 @@ public class Player : MonoBehaviour
         gridBoundsPlayer = gameController.ReturnGridbounds();
         //Nasıl deep coy olmadan kopşyalıyıcam
         // Starting position at the bottom-middle tile
-        position = new Vector2Int(((gameController.width+1)/2)-1,0);
+        position = new Vector2Int(3,2);
         transform.position = new Vector2(position.x * tileSize, position.y * tileSize);
         // Starting animation
         animator = GetComponent<Animator>();

@@ -695,6 +695,7 @@ MonoBehaviour:
   crowdParentBottom: {fileID: 547946638}
   crowdParentTop: {fileID: 1595390721}
   initialNodderPer: 0.2
+  cameraTransitionDuration: 1
 --- !u!1 &246174448
 GameObject:
   m_ObjectHideFlags: 0
@@ -8028,6 +8029,9 @@ GameObject:
   - component: {fileID: 1920807223}
   - component: {fileID: 1920807222}
   - component: {fileID: 1920807224}
+  - component: {fileID: 1920807231}
+  - component: {fileID: 1920807232}
+  - component: {fileID: 1920807233}
   - component: {fileID: 1920807230}
   - component: {fileID: 1920807229}
   - component: {fileID: 1920807228}
@@ -8060,13 +8064,7 @@ MonoBehaviour:
   crowdController: {fileID: 205434466}
   width: 7
   height: 7
-  gridBounds: 
   tileSize: 8
-  levelLoad5Wait: 2
-  audioSources: []
-  beatTimer: {fileID: 1920807224}
-  tilePrefab: {fileID: 626526570878754223, guid: 56a248bf72e315e4f8df7f89966eed1d, type: 3}
-  trianglePrefab: {fileID: 3174134684204338043, guid: dc1b601de13087c43a9d7cd1da786a0e, type: 3}
   spotLightPrefab: {fileID: 7483423840028306526, guid: 5edc494a21043b346bf6d5d00f7233e2, type: 3}
   heartPrefab: {fileID: 3356804048664572338, guid: 2430e3acbcdd0134b8a9ba0582b1c737, type: 3}
   endScreen: {fileID: 752696568}
@@ -8074,8 +8072,12 @@ MonoBehaviour:
   player: {fileID: 917720429}
   enemies: []
   spotlights: []
+  totalTrianglesToSpawn: 0
+  trianglesSpawned: 0
+  isSpawningEnemies: 0
+  canSpawn: 1
   avarage: 0
-  levelText: {fileID: 1209120971}
+  cameraTransitionDuration: 1
   resizeFlag: 0
   gridBoundsFlag: 0
 --- !u!4 &1920807223
@@ -8689,6 +8691,46 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &1920807231
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1920807221}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d6924e0f7f86c1448a49e7caaf39b6b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  levelText: {fileID: 1209120971}
+  levelLoad5Wait: 1
+--- !u!114 &1920807232
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1920807221}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 279cf3a62ec1f37468d2b4f7a4d1bbb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  trianglePrefab: {fileID: 3174134684204338043, guid: dc1b601de13087c43a9d7cd1da786a0e, type: 3}
+--- !u!114 &1920807233
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1920807221}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 120d391fe0db0b849b17bb5f53481dcc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  tilePrefab: {fileID: 626526570878754223, guid: 56a248bf72e315e4f8df7f89966eed1d, type: 3}
 --- !u!1 &1921442088
 GameObject:
   m_ObjectHideFlags: 0

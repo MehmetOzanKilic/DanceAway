@@ -28,7 +28,7 @@ public class SpotlightSquare: MonoBehaviour
         // Setting initial position
         transform.position = new Vector2(position.x * gameController.tileSize, position.y * gameController.tileSize);
         nextPosition = position;
-        gridBoundsSpotlight = gameController.gridBounds;
+        gridBoundsSpotlight = GameController.gridBounds;
         spriteRenderer = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
         speed = gameController.tileSize / beatTimer.beatInterval;

@@ -2,9 +2,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+using static GameController;
 public class cTriangle : MonoBehaviour
 {
-    public BeatTimer beatTimer;
+    public BeatTimer bT;
     private Animator animator;
 
     void Start()
@@ -13,7 +14,7 @@ public class cTriangle : MonoBehaviour
     }
     public void Initialize(BeatTimer beatTimerRef)
     {
-        beatTimer = beatTimerRef;
+        
         beatTimer.OnBeat += Nodding;
         canNod=false;
         animator = GetComponent<Animator>();

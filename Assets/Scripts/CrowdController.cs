@@ -2,8 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+using static GameController;
+
 public class CrowdController : MonoBehaviour
 {
+    private GameController gc;
     [SerializeField]private GameObject trianglePrefab;
     [SerializeField]private int xOffset;
     [SerializeField]private int yOffset;
@@ -12,6 +15,14 @@ public class CrowdController : MonoBehaviour
     public GameObject crowdParentBottom;
     public GameObject crowdParentTop;
     private List<GameObject> crowd;
+    private GameObject leftCrowd;
+    private GameObject rightCrowd;
+    private GameObject bottomCrowd;
+    private GameObject topCrowd;
+    private Vector3 leftCrowdPos;
+    private Vector3 rightCrowdPos;
+    private Vector3 bottomCrowdPos;
+    private Vector3 topCrowdPos;  
     void Start()
     {
         
@@ -24,6 +35,7 @@ public class CrowdController : MonoBehaviour
         crowdParentBottom = new GameObject("CrowdBottom");
         crowdParentTop = new GameObject("CrowdTop");*/
         crowd = new List<GameObject>();
+        gc = GameObject.Find("GameController").GetComponent<GameController>();
         //SpawnCrowd(beatTimer,width,height,tileSize);
         GetAllCTriangles(beatTimer);
     }
@@ -125,6 +137,54 @@ public class CrowdController : MonoBehaviour
             nodders.RemoveAt(random);
         }
     }
+
+    public void ResizeCrowd()
+    {
+        StartCoroutine(ChangeCrowdPos(gc.width-gridBounds[1]));
+    }
+
+    public float cameraTransitionDuration = 1f;
+    private IEnumerator ChangeCrowdPos(int bound)
+    {
+        float timePassed = 0.1f;
+        Vector3[] initialPos = new Vector3[]
+        {leftCrowd.transform.position,
+        rightCrowd.transform.position,
+        bottomCrowd.transform.position,
+        topCrowd.transform.position};
+
+        Vector3[] targetPos = new Vector3[]
+        {leftCrowdPos + new Vector3(bound*gc.tileSize,0,0),
+        rightCrowdPos + new Vector3(-bound*gc.tileSize,0,0),
+        bottomCrowdPos + new Vector3(0,bound*gc.tileSize,0),
+        topCrowdPos + new Vector3(0,-bound*gc.tileSize,0)};
+
+        while(timePassed<cameraTransitionDuration)
+        {
+            leftCrowd.transform.position = new Vector3(Mathf.Lerp(initialPos[0].x, targetPos[0].x,timePassed/cameraTransitionDuration),leftCrowd.transform.position.y,0);
+            rightCrowd.transform.position = new Vector3(Mathf.Lerp(initialPos[1].x, targetPos[1].x,timePassed/cameraTransitionDuration),rightCrowd.transform.position.y,0);
+            bottomCrowd.transform.position = new Vector3(bottomCrowd.transform.position.x,Mathf.Lerp(initialPos[2].y, targetPos[2].y,timePassed/cameraTransitionDuration),0);
+            topCrowd.transform.position = new Vector3(topCrowd.transform.position.x,Mathf.Lerp(initialPos[3].y, targetPos[3].y,timePassed/cameraTransitionDuration),0);
+            timePassed += Time.deltaTime;
+            yield return null;
+        }
+
+
+    }
+        
+        
+    public void GetCrowdParents()
+    {
+        leftCrowd = crowdParentLeft;
+        rightCrowd = crowdParentRight;
+        bottomCrowd = crowdParentBottom;
+        topCrowd = crowdParentTop;
+
+        leftCrowdPos = leftCrowd.transform.position;
+        rightCrowdPos = rightCrowd.transform.position;
+        bottomCrowdPos = bottomCrowd.transform.position;
+        topCrowdPos = topCrowd.transform.position;
+    } 
 
     /*private void SpawnCrowd(BeatTimer beatTimer, int width, int height, float tileSize)
     {

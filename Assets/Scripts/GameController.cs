@@ -25,21 +25,18 @@ public class GameController : MonoBehaviour
 {
     
     [HideInInspector]public BeatState State;
-    [SerializeField]private int levelNo=1;
+    [SerializeField]public int levelNo=1;
     [SerializeField]private float spotlightSpawnChance = 0.4f;
     [SerializeField]private float heartSpawnChance = 0.05f;    
     [SerializeField]private CrowdController crowdController;
     [SerializeField]public int width;
     [SerializeField]public int height;
-    [SerializeField]public List<int> gridBounds = new List<int>();// width lower(0)/upper(1), height lower(2)/upper(3) 
+    [SerializeField]public static List<int> gridBounds = new List<int>();// width lower(0)/upper(1), height lower(2)/upper(3) 
     public float tileSize = 8.0f;
-    [SerializeField]private int levelLoad5Wait=1;
-    [SerializeField]private AudioSource[] audioSources;  
-    [SerializeField]private BeatTimer beatTimer;
+    [SerializeField]public static AudioSource[] audioSources;  
+    public static BeatTimer beatTimer;
     private GameState currentState;
-    private GameObject[,] grid;
-    [SerializeField]private GameObject tilePrefab; // Reference to the tile prefab
-    [SerializeField]private GameObject trianglePrefab; // Reference to the triangle prefab
+    public static GameObject[,] grid;
     [SerializeField]private GameObject spotLightPrefab;
     [SerializeField]private GameObject heartPrefab;
     [SerializeField]private GameObject endScreen;
@@ -49,31 +46,35 @@ public class GameController : MonoBehaviour
     [HideInInspector]public List<Triangle> enemies = new List<Triangle>();
     [HideInInspector]public List<SpotlightSquare> spotlights = new List<SpotlightSquare>();
     private List<GameObject> hearts = new List<GameObject>();
-    private int totalTrianglesToSpawn;
-    private int trianglesSpawned;
+    public int totalTrianglesToSpawn;
+    public int trianglesSpawned;
     private int beatCounter = 0;
-    private bool isSpawningEnemies = false; // Flag to track enemy spawning
+    public bool isSpawningEnemies = false; // Flag to track enemy spawning
+    private LevelManager levelManager;
+    private EnemySpawner enemySpawner;
+    private GridController gridController;
 
     void Start()
     {
         // Initializing the arena grid and Centering the camera
         grid = new GameObject[width, height];
-        gridBounds.Add(0);
-        gridBounds.Add(width);
-        gridBounds.Add(0);
-        gridBounds.Add(height);
-        CenterCamera();
-        InitializeGrid();
-        player.StartPlayer();
-        // Setting initial audio pitches
+        beatTimer = GetComponent<BeatTimer>();
         audioSources = GetComponents<AudioSource>();
+        levelManager = GetComponent<LevelManager>();
+        enemySpawner = GetComponent<EnemySpawner>();
+        gridController = GetComponent<GridController>();
+
+        CenterCamera();
+
+        gridController.InitializeGrid();
+
+        // Setting initial audio pitches
         for(int i = 0; i < 6; i++)
         {
             audioSources[i].Stop();
             audioSources[i].pitch = 0.8333f;
         }
 
-        levelText.gameObject.SetActive(false);
         filterSR = filter.GetComponent<SpriteRenderer>();
         colorChange = UnityEngine.Random.Range(0, 360);
         endScreen.SetActive(false);
@@ -81,15 +82,17 @@ public class GameController : MonoBehaviour
 
         beatTimer.OnBeat += HandleBeat;
 
-        ChangeGridBounds();
+        player.StartPlayer();
 
-        GetCrowdParents();
+        gridController.ChangeGridBounds();
 
-        ResizeCrowd();
+        crowdController.GetCrowdParents();
+
+        crowdController.ResizeCrowd();
 
         StartGame();
     }
-    private bool canSpawn = true;
+    public bool canSpawn = true;
     void HandleBeat()// Handles all the checks happening once per beat
     {
 
@@ -104,14 +107,14 @@ public class GameController : MonoBehaviour
 
         if (isSpawningEnemies)
         {
-            if(canSpawn)SpawnRemainingEnemies();
+            if(canSpawn)enemySpawner.SpawnRemainingEnemies();
         }
 
         if(enemies.Count == 0 && !isSpawningEnemies)
         {
-            LoadLevel();// Load level if only there are no enemies present and none will be spawned
-            ChangeGridBounds();
-            ResizeCrowd();
+            levelManager.LoadLevel();// Load level if only there are no enemies present and none will be spawned
+            gridController.ChangeGridBounds();
+            crowdController.ResizeCrowd();
         }
 
         HandleMerging();
@@ -150,8 +153,8 @@ public class GameController : MonoBehaviour
         // After all enemies have moved, handle grid bounds change if needed
         if (gridBoundsFlag)
         {
-            ChangeGridBounds();
-            ResizeCrowd();
+            gridController.ChangeGridBounds();
+            crowdController.ResizeCrowd();
             gridBoundsFlag = false;
         }
     }
@@ -230,127 +233,6 @@ public class GameController : MonoBehaviour
         crowdController.LessNodders(no);
     }
 
-    private bool flag5=true;
-    public void LoadLevel()
-    {
-        levelNo++;
-        if((levelNo%5)==0 && flag5)
-        {   
-            flag5 = false;
-            StartCoroutine(Load5());
-            flag5 = true;
-        }
-        totalTrianglesToSpawn = levelNo;
-        trianglesSpawned = 0;
-        isSpawningEnemies = true;
-    }
-
-    private IEnumerator Load5()
-    {
-        canSpawn=false;
-        OpenLevelText();
-        StopMusic();
-        yield return new WaitForSeconds(levelLoad5Wait);
-        ChangePitch();
-        CloseLevelText();
-        StartMusic();
-        yield return new WaitForSeconds(levelLoad5Wait/2);
-        canSpawn=true;
-    }
-
-    private void StartMusic()
-    {
-        beatTimer.beatCounter=0;
-        beatTimer.play=true;
-    }
-
-    private void StopMusic()
-    {
-        for (int i = 0; i < 6; i++)
-        {
-            audioSources[i].Stop();
-        }
-    }
-
-    private void ChangePitch()
-    {
-        // Different beat intervals and pitches are set according to the level no.
-        if(levelNo == 5)
-        {
-            beatTimer.beatInterval = 0.571f;
-            for (int i = 0; i < 6; i++)
-            {
-                audioSources[i].pitch = 0.875f;
-            }
-        }
-        else if(levelNo == 10)
-        {
-            beatTimer.beatInterval = 0.545f;
-            for (int i = 0; i < 6; i++)
-            {
-                audioSources[i].pitch = 0.9167f;
-            }
-        }
-        else if(levelNo == 15)
-        {
-            beatTimer.beatInterval = 0.5217f;
-            for (int i = 0; i < 6; i++)
-            {
-                audioSources[i].pitch = 0.9583f;
-            }
-        }
-        else if(levelNo == 20)
-        {
-            beatTimer.beatInterval = 0.5f;
-            for (int i = 0; i < 6; i++)
-            {
-                audioSources[i].pitch = 1f;
-            }
-        }
-        else if(levelNo == 25)
-        {
-            beatTimer.beatInterval = 0.48f;
-            for (int i = 0; i < 6; i++)
-            {
-                audioSources[i].pitch = 1.0417f;
-            }
-        }
-        else if(levelNo == 30)
-        {
-            beatTimer.beatInterval = 0.4615f;
-            for (int i = 0; i < 6; i++)
-            {
-                audioSources[i].pitch = 1.0833f;
-            }
-        }
-        else if(levelNo == 35 )
-        {
-            beatTimer.beatInterval = 0.4444f;
-            for (int i = 0; i < 6; i++)
-            {
-                audioSources[i].pitch = 1.125f;
-            }
-        }
-        else
-        {
-            beatTimer.beatInterval = 0.4286f;
-            for (int i = 0; i < 6; i++)
-            {
-                audioSources[i].pitch = 1.1667f;
-            }
-        }
-    }
-
-    [SerializeField]private Text levelText;
-    private void OpenLevelText()
-    {
-        levelText.text = "Level " + levelNo;
-        levelText.gameObject.SetActive(true);
-    }
-    private void CloseLevelText()
-    {
-        levelText.gameObject.SetActive(false);
-    }
 
     void SwitchColor()// To chage the arena grid's color randomly each beat
     {
@@ -520,79 +402,11 @@ public class GameController : MonoBehaviour
         Camera.main.orthographicSize = arenaWidth / (1.3f*screenAspect);
     }
 
-    void InitializeGrid()
-    {
-        GameObject gridParent = new GameObject("Grid");
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                grid[x, y] = Instantiate(tilePrefab, new Vector2(x * tileSize, y * tileSize), Quaternion.identity);
-                grid[x, y].transform.localScale = new Vector3(tileSize, tileSize, 1);
-                grid[x, y].name = $"Tile_{x}_{y}";
-                if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
-                grid[x,y].transform.parent = gridParent.transform;
-            }
-        }
-    }
 
 
-    private int maxX;
-    private int maxY;
-    private int minX;
-    private int minY;
 
-    private void ChangeGridBounds()
-    {
-        print("hwy");
-        if (gridBounds.Count < 4)
-        {
-            Debug.LogError("GridBounds list does not contain enough elements!");
-            return;
-        }
-
-        if(enemies.Count==0)
-        {
-            gridBounds[0] = 0;
-            gridBounds[1] = 7; 
-            gridBounds[2] = 0; 
-            gridBounds[3] = 7;
-            StartCoroutine(ChangeCameraOrthoSize(1.3f));
-        }
-
-        else
-        {
-            maxX=Math.Max(enemies.Max(enemy => enemy.position.x),player.position.x);
-            maxY=Math.Max(enemies.Max(enemy => enemy.position.y),player.position.y);
-            minX=Math.Min(enemies.Min(enemy => enemy.position.x),player.position.x);
-            minY=Math.Min(enemies.Min(enemy => enemy.position.y),player.position.y);
-
-            if(maxX<width-2 && minX>1 && maxY<height-2 && minY>1)
-            {
-                //??????? Her şeyin 3 e 3 den büyük olduğuna emin olmak lazım
-                gridBounds[0] = 2;
-                gridBounds[1] = 5; 
-                gridBounds[2] = 2; 
-                gridBounds[3] = 5;
-                StartCoroutine(ChangeCameraOrthoSize(2f));
-            }
-            else if(maxX<width-1 && minX>0 && maxY<height-1 && minY>0)
-            {
-                //??????? Her şeyin 3 e 3 den büyük olduğuna emin olmak lazım
-                gridBounds[0] = 1;
-                gridBounds[1] = 6; 
-                gridBounds[2] = 1; 
-                gridBounds[3] = 6;
-                StartCoroutine(ChangeCameraOrthoSize(1.55f));
-            }
-            else StartCoroutine(ChangeCameraOrthoSize(1.3f));
-        }
-
-        player.ChangeGridBounds();
-    }
-
-    private float cameraTransitionDuration = 1f;
-    private IEnumerator ChangeCameraOrthoSize(float f)
+    public float cameraTransitionDuration = 1f;
+    public IEnumerator ChangeCameraOrthoSize(float f)
     {
         float timePassed = 0.1f;
         float initialSize = Camera.main.orthographicSize;
@@ -615,24 +429,10 @@ public class GameController : MonoBehaviour
         totalTrianglesToSpawn = levelNo;
         trianglesSpawned = 0;
         isSpawningEnemies = true;
-        SpawnRemainingEnemies(); // Ensure enemies are spawned when the game starts
+        enemySpawner.SpawnRemainingEnemies(); // Ensure enemies are spawned when the game starts
     }
 
-    void SpawnRemainingEnemies()
-    {
-        if (trianglesSpawned < totalTrianglesToSpawn)
-        {
-            int spawnCount = Mathf.Min(6, totalTrianglesToSpawn - trianglesSpawned);
-            SpawnEnemies(spawnCount);
 
-            if (trianglesSpawned >= totalTrianglesToSpawn)
-            {
-                isSpawningEnemies = false; // Unset the flag once all triangles are spawned
-            }
-
-            UpdateChasingTriangle();
-        }
-    }
 
     void ChangeState(GameState newState)
     {
@@ -658,7 +458,7 @@ public class GameController : MonoBehaviour
     }
 
     [SerializeField]private bool resizeFlag=false;
-    [SerializeField]private bool gridBoundsFlag=false;
+    [SerializeField]public bool gridBoundsFlag=false;
     void Update()
     {
         if (currentState == GameState.Play)
@@ -677,33 +477,6 @@ public class GameController : MonoBehaviour
         Color color = Color.HSVToRGB(val,0.75f,1); 
         color.a = 0.8f;
         filterSR.color = color;
-    }
-
-    private int nameCounter = 0;
-    void SpawnEnemies(int spawnCount)
-    {
-        HashSet<Vector2Int> occupiedPositions = new HashSet<Vector2Int>();
-
-        occupiedPositions.Add(player.position);
-
-        for (int i = 0; i < spawnCount; i++)
-        {
-            Vector2Int spawnPosition = GetOutsideSpawnPosition(occupiedPositions);
-            if (spawnPosition != Vector2Int.zero)
-            {
-                GameObject triangleObject = Instantiate(trianglePrefab, new Vector2(spawnPosition.x * tileSize, spawnPosition.y * tileSize), Quaternion.identity);
-                Triangle triangle = triangleObject.GetComponent<Triangle>();
-                triangle.Initialize(spawnPosition, this, beatTimer);  // Use the Initialize method
-                enemies.Add(triangle);
-                occupiedPositions.Add(spawnPosition);
-                triangle.name = ++nameCounter + "Triangle";
-
-                // Ensure the triangle's first two moves are towards the inside of the grid
-                triangle.SetInitialMoves();
-
-                trianglesSpawned++;
-            }
-        }
     }
 
     private void SpawnSpotlight_Heart(Vector2Int position, int powerLevel)
@@ -745,47 +518,7 @@ public class GameController : MonoBehaviour
         spotlights.Add(spotlight);
     }
 
-    Vector2Int GetOutsideSpawnPosition(HashSet<Vector2Int> occupiedPositions)
-    {
-        List<Vector2Int> possiblePositions = new List<Vector2Int>();
-        Vector2Int playerPos = player.position;
 
-        // Generate positions outside the grid, excluding the bottom side
-        for (int y = 1; y < gridBounds[3]; y++)
-        {
-            if (playerPos.x != gridBounds[0])
-            {
-                Vector2Int leftPosition = new Vector2Int(gridBounds[0]-1, y); // Left side
-                if (!occupiedPositions.Contains(leftPosition))
-                    possiblePositions.Add(leftPosition);
-            }
-
-            if (playerPos.x != gridBounds[1] - 1)
-            {
-                Vector2Int rightPosition = new Vector2Int(gridBounds[1], y); // Right side
-                if (!occupiedPositions.Contains(rightPosition))
-                    possiblePositions.Add(rightPosition);
-            }
-        }
-
-        for (int x = 0; x < gridBounds[1]; x++)
-        {
-            if (playerPos.y != gridBounds[3] - 1)
-            {
-                Vector2Int topPosition = new Vector2Int(x, gridBounds[3]); // Top side
-                if (!occupiedPositions.Contains(topPosition))
-                    possiblePositions.Add(topPosition);
-            }
-        }
-
-        if (possiblePositions.Count == 0)
-        {
-            return Vector2Int.zero; // No valid position found
-        }
-
-        int randIndex = UnityEngine.Random.Range(0, possiblePositions.Count);
-        return possiblePositions[randIndex];
-    }
 
     public void RemoveEnemy(Triangle enemy)
     {
@@ -829,60 +562,9 @@ public class GameController : MonoBehaviour
         return tempBounds;
     }
 
-    private GameObject leftCrowd;
-    private GameObject rightCrowd;
-    private GameObject bottomCrowd;
-    private GameObject topCrowd;
-    private Vector3 leftCrowdPos;
-    private Vector3 rightCrowdPos;
-    private Vector3 bottomCrowdPos;
-    private Vector3 topCrowdPos;
-    public void GetCrowdParents()
-    {
-        leftCrowd = crowdController.crowdParentLeft;
-        rightCrowd = crowdController.crowdParentRight;
-        bottomCrowd = crowdController.crowdParentBottom;
-        topCrowd = crowdController.crowdParentTop;
-
-        leftCrowdPos = leftCrowd.transform.position;
-        rightCrowdPos = rightCrowd.transform.position;
-        bottomCrowdPos = bottomCrowd.transform.position;
-        topCrowdPos = topCrowd.transform.position;
-    }
 
     //keeps making the crowd smaller if it keeps going
-    private void ResizeCrowd()
-    {
-        StartCoroutine(ChangeCrowdPos(width-gridBounds[1]));
-    }
 
-    private IEnumerator ChangeCrowdPos(int bound)
-    {
-        float timePassed = 0.1f;
-        Vector3[] initialPos = new Vector3[]
-        {leftCrowd.transform.position,
-        rightCrowd.transform.position,
-        bottomCrowd.transform.position,
-        topCrowd.transform.position};
-
-        Vector3[] targetPos = new Vector3[]
-        {leftCrowdPos + new Vector3(bound*tileSize,0,0),
-        rightCrowdPos + new Vector3(-bound*tileSize,0,0),
-        bottomCrowdPos + new Vector3(0,bound*tileSize,0),
-        topCrowdPos + new Vector3(0,-bound*tileSize,0)};
-
-        while(timePassed<cameraTransitionDuration)
-        {
-            leftCrowd.transform.position = new Vector3(Mathf.Lerp(initialPos[0].x, targetPos[0].x,timePassed/cameraTransitionDuration),leftCrowd.transform.position.y,0);
-            rightCrowd.transform.position = new Vector3(Mathf.Lerp(initialPos[1].x, targetPos[1].x,timePassed/cameraTransitionDuration),rightCrowd.transform.position.y,0);
-            bottomCrowd.transform.position = new Vector3(bottomCrowd.transform.position.x,Mathf.Lerp(initialPos[2].y, targetPos[2].y,timePassed/cameraTransitionDuration),0);
-            topCrowd.transform.position = new Vector3(topCrowd.transform.position.x,Mathf.Lerp(initialPos[3].y, targetPos[3].y,timePassed/cameraTransitionDuration),0);
-            timePassed += Time.deltaTime;
-            yield return null;
-        }
-
-
-    }
 
     /*void ResizeGrid(int newWidth, int newHeight)
     {
