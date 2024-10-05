@@ -97,7 +97,7 @@ public class BeatTimer : MonoBehaviour
         }
         else
         {
-            backGround.color = Color.white; // Far from the beat
+            backGround.color = Color.black; // Far from the beat
             State = BeatState.OffBeat;
             if(!beatFlag)beatFlag=true;
         }

@@ -83,9 +83,9 @@ public class GameController : MonoBehaviour
 
         ChangeGridBounds();
 
-        getCrowdParents();
+        GetCrowdParents();
 
-        resizeCrowd();
+        ResizeCrowd();
 
         StartGame();
     }
@@ -111,6 +111,7 @@ public class GameController : MonoBehaviour
         {
             LoadLevel();// Load level if only there are no enemies present and none will be spawned
             ChangeGridBounds();
+            ResizeCrowd();
         }
 
         HandleMerging();
@@ -150,6 +151,7 @@ public class GameController : MonoBehaviour
         if (gridBoundsFlag)
         {
             ChangeGridBounds();
+            ResizeCrowd();
             gridBoundsFlag = false;
         }
     }
@@ -502,25 +504,25 @@ public class GameController : MonoBehaviour
         baseSpotlight.MergeSpotlights(numberOfSpotlights);
     }
 
+    private float screenAspect;
+    private float arenaWidth;
     void CenterCamera()
     {
         //Centers the camera to have same positioning ratios in different devices
         float centerX = (width * tileSize - tileSize) / 2.0f;
 
-        float yScreenPosition = Screen.height * 0.35f;
+        float yScreenPosition = Screen.height * 0.5f;
         Vector3 worldPosition = Camera.main.ScreenToWorldPoint(new Vector3(0, yScreenPosition, Camera.main.nearClipPlane));
 
         Camera.main.transform.position = new Vector3(centerX, worldPosition.y, Camera.main.transform.position.z);
-        float screenAspect = (float)Screen.width / (float)Screen.height;
-        float arenaWidth = width*height;
-        Camera.main.orthographicSize = arenaWidth / (1.2f * screenAspect);
+        screenAspect = (float)Screen.width / (float)Screen.height;
+        arenaWidth = width*height;
+        Camera.main.orthographicSize = arenaWidth / (1.3f*screenAspect);
     }
 
     void InitializeGrid()
     {
-        GameObject parent = Instantiate(tilePrefab, new Vector2(20,20), Quaternion.identity);
-        parent.transform.localScale = new Vector2(tileSize*width,tileSize*height);
-        parent.GetComponent<SpriteRenderer>().sortingOrder = -20;
+        GameObject gridParent = new GameObject("Grid");
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -529,50 +531,11 @@ public class GameController : MonoBehaviour
                 grid[x, y].transform.localScale = new Vector3(tileSize, tileSize, 1);
                 grid[x, y].name = $"Tile_{x}_{y}";
                 if ((x + y) % 2 == 1) grid[x, y].GetComponent<SpriteRenderer>().color = Color.cyan;
-                grid[x,y].transform.parent = parent.transform;
+                grid[x,y].transform.parent = gridParent.transform;
             }
         }
     }
 
-    void ResizeGrid(int newWidth, int newHeight)
-    {
-        // Calculate the grid center based on the original width and height
-        float centerX = (width * tileSize) / 2.0f;
-        float centerY = (height * tileSize) / 2.0f;
-
-        // Calculate the boundaries of the new grid dimensions
-        float newCenterX = (newWidth * tileSize) / 2.0f;
-        float newCenterY = (newHeight * tileSize) / 2.0f;
-
-        // Iterate through the grid to activate/deactivate tiles
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                // Calculate the current tile's position relative to the center
-                float tileXPos = (x * tileSize) + tileSize / 2.0f;
-                float tileYPos = (y * tileSize) + tileSize / 2.0f;
-
-                // Determine if this tile is within the new width and height bounds
-                bool isWithinBoundsX = Mathf.Abs(tileXPos - centerX) <= newCenterX;
-                bool isWithinBoundsY = Mathf.Abs(tileYPos - centerY) <= newCenterY;
-
-                if (isWithinBoundsX && isWithinBoundsY)
-                {
-                    // Activate the tile
-                    grid[x, y].SetActive(true);
-                }
-                else
-                {
-                    // Deactivate the tile
-                    grid[x, y].SetActive(false);
-                }
-            }
-        }
-
-        width = newWidth;
-        height = newHeight;
-    }
 
     private int maxX;
     private int maxY;
@@ -594,6 +557,7 @@ public class GameController : MonoBehaviour
             gridBounds[1] = 7; 
             gridBounds[2] = 0; 
             gridBounds[3] = 7;
+            StartCoroutine(ChangeCameraOrthoSize(1.3f));
         }
 
         else
@@ -610,6 +574,7 @@ public class GameController : MonoBehaviour
                 gridBounds[1] = 5; 
                 gridBounds[2] = 2; 
                 gridBounds[3] = 5;
+                StartCoroutine(ChangeCameraOrthoSize(2f));
             }
             else if(maxX<width-1 && minX>0 && maxY<height-1 && minY>0)
             {
@@ -618,9 +583,30 @@ public class GameController : MonoBehaviour
                 gridBounds[1] = 6; 
                 gridBounds[2] = 1; 
                 gridBounds[3] = 6;
+                StartCoroutine(ChangeCameraOrthoSize(1.55f));
             }
+            else StartCoroutine(ChangeCameraOrthoSize(1.3f));
         }
 
+        player.ChangeGridBounds();
+    }
+
+    private float cameraTransitionDuration = 1f;
+    private IEnumerator ChangeCameraOrthoSize(float f)
+    {
+        float timePassed = 0.1f;
+        float initialSize = Camera.main.orthographicSize;
+        float targetSize = arenaWidth / (f*screenAspect);
+
+        while (timePassed < cameraTransitionDuration)
+        {
+            Camera.main.orthographicSize = Mathf.Lerp(initialSize,targetSize,timePassed/cameraTransitionDuration);
+            timePassed += Time.deltaTime;
+            print("noluyor");
+            yield return null;
+        }
+
+        //Camera.main.orthographicSize = targetSize;
     }
 
     void StartGame()
@@ -678,13 +664,9 @@ public class GameController : MonoBehaviour
         if (currentState == GameState.Play)
         {
             player.HandleInput();
-            FilterColor();
+            //FilterColor();
         }
-        if(resizeFlag)
-        {    
-            ResizeGrid(5,5);
-            resizeFlag=false;
-        }
+
     }
 
     private float colorChange;
@@ -849,31 +831,97 @@ public class GameController : MonoBehaviour
 
     private GameObject leftCrowd;
     private GameObject rightCrowd;
-    private Vector2 leftCrowdPos;
-    private Vector2 rightCrowdPos;
-    public void getCrowdParents()
+    private GameObject bottomCrowd;
+    private GameObject topCrowd;
+    private Vector3 leftCrowdPos;
+    private Vector3 rightCrowdPos;
+    private Vector3 bottomCrowdPos;
+    private Vector3 topCrowdPos;
+    public void GetCrowdParents()
     {
         leftCrowd = crowdController.crowdParentLeft;
         rightCrowd = crowdController.crowdParentRight;
+        bottomCrowd = crowdController.crowdParentBottom;
+        topCrowd = crowdController.crowdParentTop;
 
         leftCrowdPos = leftCrowd.transform.position;
         rightCrowdPos = rightCrowd.transform.position;
+        bottomCrowdPos = bottomCrowd.transform.position;
+        topCrowdPos = topCrowd.transform.position;
     }
 
-    private void resizeCrowd()
+    //keeps making the crowd smaller if it keeps going
+    private void ResizeCrowd()
     {
-        if(gridBounds[1] == width)
-        {
-            leftCrowd.transform.position = leftCrowdPos;
-            rightCrowd.transform.position = rightCrowdPos;
-        }
-        else
-        {
-            leftCrowd.transform.position = leftCrowd.transform.position + new Vector3(tileSize*gridBounds[0], 0,0);
-            print(leftCrowd.transform.position);
-            rightCrowd.transform.position = rightCrowd.transform.position - new Vector3(tileSize*(width-gridBounds[1]), 0,0);
-            print(rightCrowd.transform.position);
-        }
+        StartCoroutine(ChangeCrowdPos(width-gridBounds[1]));
     }
+
+    private IEnumerator ChangeCrowdPos(int bound)
+    {
+        float timePassed = 0.1f;
+        Vector3[] initialPos = new Vector3[]
+        {leftCrowd.transform.position,
+        rightCrowd.transform.position,
+        bottomCrowd.transform.position,
+        topCrowd.transform.position};
+
+        Vector3[] targetPos = new Vector3[]
+        {leftCrowdPos + new Vector3(bound*tileSize,0,0),
+        rightCrowdPos + new Vector3(-bound*tileSize,0,0),
+        bottomCrowdPos + new Vector3(0,bound*tileSize,0),
+        topCrowdPos + new Vector3(0,-bound*tileSize,0)};
+
+        while(timePassed<cameraTransitionDuration)
+        {
+            leftCrowd.transform.position = new Vector3(Mathf.Lerp(initialPos[0].x, targetPos[0].x,timePassed/cameraTransitionDuration),leftCrowd.transform.position.y,0);
+            rightCrowd.transform.position = new Vector3(Mathf.Lerp(initialPos[1].x, targetPos[1].x,timePassed/cameraTransitionDuration),rightCrowd.transform.position.y,0);
+            bottomCrowd.transform.position = new Vector3(bottomCrowd.transform.position.x,Mathf.Lerp(initialPos[2].y, targetPos[2].y,timePassed/cameraTransitionDuration),0);
+            topCrowd.transform.position = new Vector3(topCrowd.transform.position.x,Mathf.Lerp(initialPos[3].y, targetPos[3].y,timePassed/cameraTransitionDuration),0);
+            timePassed += Time.deltaTime;
+            yield return null;
+        }
+
+
+    }
+
+    /*void ResizeGrid(int newWidth, int newHeight)
+    {
+        // Calculate the grid center based on the original width and height
+        float centerX = (width * tileSize) / 2.0f;
+        float centerY = (height * tileSize) / 2.0f;
+
+        // Calculate the boundaries of the new grid dimensions
+        float newCenterX = (newWidth * tileSize) / 2.0f;
+        float newCenterY = (newHeight * tileSize) / 2.0f;
+
+        // Iterate through the grid to activate/deactivate tiles
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                // Calculate the current tile's position relative to the center
+                float tileXPos = (x * tileSize) + tileSize / 2.0f;
+                float tileYPos = (y * tileSize) + tileSize / 2.0f;
+
+                // Determine if this tile is within the new width and height bounds
+                bool isWithinBoundsX = Mathf.Abs(tileXPos - centerX) <= newCenterX;
+                bool isWithinBoundsY = Mathf.Abs(tileYPos - centerY) <= newCenterY;
+
+                if (isWithinBoundsX && isWithinBoundsY)
+                {
+                    // Activate the tile
+                    grid[x, y].SetActive(true);
+                }
+                else
+                {
+                    // Deactivate the tile
+                    grid[x, y].SetActive(false);
+                }
+            }
+        }
+
+        width = newWidth;
+        height = newHeight;
+    }*/
 
 }

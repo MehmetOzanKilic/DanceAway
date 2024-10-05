@@ -279,4 +279,9 @@ public class Player : MonoBehaviour
             Move(Vector2Int.right);
         }
     }
+
+    public void ChangeGridBounds()
+    {
+        gridBoundsPlayer = gameController.ReturnGridbounds();
+    }
 }

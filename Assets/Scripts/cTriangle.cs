@@ -15,6 +15,7 @@ public class cTriangle : MonoBehaviour
     {
         beatTimer = beatTimerRef;
         beatTimer.OnBeat += Nodding;
+        canNod=false;
         animator = GetComponent<Animator>();
         // Initial animation
         NotVibing();

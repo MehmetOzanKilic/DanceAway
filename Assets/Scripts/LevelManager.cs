@@ -4,11 +4,11 @@ using UnityEngine;
 
 public class LevelManager : MonoBehaviour
 {
-    // Start is called before the first frame update
+    private GameController gameController;
     void Start()
     {
-        
-    }
+        gameController = GameObject.Find("GameController").GetComponent<GameController>();
+    }   
 
     // Update is called once per frame
     void Update()
