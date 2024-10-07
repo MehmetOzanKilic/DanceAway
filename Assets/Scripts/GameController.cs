@@ -61,8 +61,12 @@ public class GameController : MonoBehaviour
         beatTimer = GetComponent<BeatTimer>();
         audioSources = GetComponents<AudioSource>();
         levelManager = GetComponent<LevelManager>();
+        levelManager.Initialize();
         enemySpawner = GetComponent<EnemySpawner>();
+        enemySpawner.Initialize();  
         gridController = GetComponent<GridController>();
+        gridController.Initialize();
+        crowdController.Initialize(beatTimer,width,height,tileSize);
 
         CenterCamera();
 
@@ -78,13 +82,13 @@ public class GameController : MonoBehaviour
         filterSR = filter.GetComponent<SpriteRenderer>();
         colorChange = UnityEngine.Random.Range(0, 360);
         endScreen.SetActive(false);
-        crowdController.Initialize(beatTimer,width,height,tileSize);
+        
 
         beatTimer.OnBeat += HandleBeat;
 
         player.StartPlayer();
 
-        gridController.ChangeGridBounds();
+        gridController.ResetGridBounds();
 
         crowdController.GetCrowdParents();
 
@@ -113,7 +117,7 @@ public class GameController : MonoBehaviour
         if(enemies.Count == 0 && !isSpawningEnemies)
         {
             levelManager.LoadLevel();// Load level if only there are no enemies present and none will be spawned
-            gridController.ChangeGridBounds();
+            gridController.ResetGridBounds();
             crowdController.ResizeCrowd();
         }
 
@@ -122,6 +126,7 @@ public class GameController : MonoBehaviour
         SwitchColor();
     }
 
+    public int enemiesKilled = 0;
     IEnumerator HandleBeatCoroutine()
     {
         List<Triangle> trianglesToRemove = new List<Triangle>();
@@ -151,7 +156,7 @@ public class GameController : MonoBehaviour
         }
 
         // After all enemies have moved, handle grid bounds change if needed
-        if (gridBoundsFlag)
+        if (gridBoundsFlag && enemiesKilled >= 5)
         {
             gridController.ChangeGridBounds();
             crowdController.ResizeCrowd();
@@ -399,7 +404,6 @@ public class GameController : MonoBehaviour
         Camera.main.transform.position = new Vector3(centerX, worldPosition.y, Camera.main.transform.position.z);
         screenAspect = (float)Screen.width / (float)Screen.height;
         arenaWidth = width*height;
-        Camera.main.orthographicSize = arenaWidth / (1.3f*screenAspect);
     }
 
 
@@ -416,7 +420,21 @@ public class GameController : MonoBehaviour
         {
             Camera.main.orthographicSize = Mathf.Lerp(initialSize,targetSize,timePassed/cameraTransitionDuration);
             timePassed += Time.deltaTime;
-            print("noluyor");
+            yield return null;
+        }
+
+        //Camera.main.orthographicSize = targetSize;
+    }
+    public IEnumerator ChangeCameraOrthoSize(int i)
+    {
+        float timePassed = 0.1f;
+        float initialSize = Camera.main.orthographicSize;
+        float targetSize = i;
+
+        while (timePassed < cameraTransitionDuration)
+        {
+            Camera.main.orthographicSize = Mathf.Lerp(initialSize,targetSize,timePassed/cameraTransitionDuration);
+            timePassed += Time.deltaTime;
             yield return null;
         }
 
@@ -527,7 +545,6 @@ public class GameController : MonoBehaviour
             SpawnSpotlight_Heart(enemy.position, enemy.powerLevel);
             enemies.Remove(enemy);
             UpdateChasingTriangle();
-            gridBoundsFlag=true;
         }
     }
 
@@ -556,7 +573,6 @@ public class GameController : MonoBehaviour
         print("herehere");
         for(int i=0; i<4; i++)
         {
-            print("herein");
             tempBounds.Add(gridBounds[i]);
         }
         return tempBounds;

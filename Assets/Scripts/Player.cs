@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using UnityEngine.UI;
 using Common.Enums;
 using UnityEditor.Animations;
+using System;
+using System.Data.Common;
 
 public class Player : MonoBehaviour
 {
@@ -39,7 +41,7 @@ public class Player : MonoBehaviour
         gridBoundsPlayer = gameController.ReturnGridbounds();
         //Nasıl deep coy olmadan kopşyalıyıcam
         // Starting position at the bottom-middle tile
-        position = new Vector2Int(3,2);
+        position = new Vector2Int((gameController.width-1)/2,((gameController.height-1)/2)-1);
         transform.position = new Vector2(position.x * tileSize, position.y * tileSize);
         // Starting animation
         animator = GetComponent<Animator>();
@@ -58,12 +60,12 @@ public class Player : MonoBehaviour
 
     private int moveCount=0;  
     private int mult;
-    public void Move(Vector2Int direction)
+    public void Move(Vector2Int direction,bool pushed=false)
     {
         Vector2Int newPosition;
         State = beatTimer.State;
         currentDirection = direction;// To use later if the player walks into a triangle.
-        crowdPushFlag = true;
+        crowdPushFlag = pushed;
 
         bool validMove=true;
 
@@ -77,7 +79,7 @@ public class Player : MonoBehaviour
         else newPosition = position;
 
         // Check if the new position is within the grid bounds
-        if (newPosition.x >= gridBoundsPlayer[0] && newPosition.x < gridBoundsPlayer[1] && newPosition.y >= gridBoundsPlayer[2] && newPosition.y < gridBoundsPlayer[3])
+        if (crowdPushFlag || (newPosition.x >= gridBoundsPlayer[0] && newPosition.x < gridBoundsPlayer[1] && newPosition.y >= gridBoundsPlayer[2] && newPosition.y < gridBoundsPlayer[3]))
         {
             int scoreIncrement = 0;
             CheckForSpotlightCollision();// Find out how much mult is.
@@ -146,6 +148,11 @@ public class Player : MonoBehaviour
         }
 
         StartCoroutine(ResetAnimation("Player_Moving"));
+    }
+
+    private void Push()
+    {
+
     }
 
     private void CheckForSpotlightCollision()
@@ -283,5 +290,41 @@ public class Player : MonoBehaviour
     public void ChangeGridBounds()
     {
         gridBoundsPlayer = gameController.ReturnGridbounds();
+        CheckIfOutside();
+    }
+
+    private void CheckIfOutside()
+    {
+        if(position.x < gridBoundsPlayer[0])
+        {
+            for(int i = gridBoundsPlayer[0]-position.x; i > 0; i--)
+            {
+                Move(Vector2Int.right,true);
+            }
+        }
+
+        if(position.x > gridBoundsPlayer[1])
+        {
+            for(int i = position.x-gridBoundsPlayer[1]; i > 0; i--)
+            {
+                Move(Vector2Int.left,true);
+            }
+        }
+
+        if(position.y < gridBoundsPlayer[2])
+        {
+            for(int i = gridBoundsPlayer[2]-position.y; i > 0; i--)
+            {
+                print("moveup");
+                Move(Vector2Int.up,true);
+            }
+        }
+        if(position.y > gridBoundsPlayer[3])
+        {
+            for(int i = position.y-gridBoundsPlayer[3]; i > 0; i--)
+            {
+                Move(Vector2Int.down,true);
+            }
+        }
     }
 }

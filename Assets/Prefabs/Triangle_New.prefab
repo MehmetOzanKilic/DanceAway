@@ -207,7 +207,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d33820d73635b54e831d4d61f91ffa6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  baseHealth: 200
+  spotlightPrefab: {fileID: 7483423840028306526, guid: 5edc494a21043b346bf6d5d00f7233e2, type: 3}
+  baseHealth: 1
+  health: 100
+  speed: 0
+  gridBounds: 
   position: {x: 0, y: 0}
   previousPosition: {x: 0, y: 0}
   gameController: {fileID: 0}
@@ -216,11 +220,8 @@ MonoBehaviour:
   currentDirection: {x: 0, y: 0}
   powerLevel: 2
   moveCount: 0
-  speed: 0
-  spotlightPrefab: {fileID: 7483423840028306526, guid: 5edc494a21043b346bf6d5d00f7233e2, type: 3}
-  health: 100
   isChasingPlayer: 0
-  flag2D: 0
+  chaseBreak: 1
 --- !u!50 &6982466518882275091
 Rigidbody2D:
   serializedVersion: 4

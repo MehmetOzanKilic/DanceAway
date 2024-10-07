@@ -6,7 +6,7 @@ using System.Collections;
 public class Triangle : MonoBehaviour
 {
     [SerializeField]private GameObject spotlightPrefab;
-    [SerializeField]private int baseHealth=200;
+    [SerializeField]private int baseHealth=1;
     [HideInInspector]public int health;
     [SerializeField]private float speed;
     [SerializeField]private List<int> gridBounds = new List<int>();// width lower(0)/upper(1), height lower(2)/upper(3)    
@@ -279,6 +279,8 @@ public class Triangle : MonoBehaviour
         if (health <= 0)
         {
             gameController.RemoveEnemy(this);
+            gameController.gridBoundsFlag = true;
+            gameController.enemiesKilled++;
             Destroy(gameObject);
         }
     }

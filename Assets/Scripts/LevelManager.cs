@@ -9,7 +9,7 @@ public class LevelManager : MonoBehaviour
     private GameController gc;
     [SerializeField]private Text levelText;
     [SerializeField]private int levelLoad5Wait=1;
-    void Start()
+    public void Initialize()
     {
         gc = GameObject.Find("GameController").GetComponent<GameController>();
         levelText.gameObject.SetActive(false);
@@ -34,6 +34,7 @@ public class LevelManager : MonoBehaviour
         gc.totalTrianglesToSpawn = gc.levelNo;
         gc.trianglesSpawned = 0;
         gc.isSpawningEnemies = true;
+        gc.enemiesKilled = 0;
     }
 
     private IEnumerator Load5()

@@ -11,13 +11,15 @@ public class GridController : MonoBehaviour
     private GameController gc;
     [SerializeField]private GameObject tilePrefab; 
     // Start is called before the first frame update
-    void Start()
+    public void Initialize()
     {
         gc = GetComponent<GameController>();
         gridBounds.Add(0);
         gridBounds.Add(gc.width);
         gridBounds.Add(0);
         gridBounds.Add(gc.height);
+        print(gc.width + "" + gc.height);
+
     }
 
     // Update is called once per frame
@@ -29,6 +31,7 @@ public class GridController : MonoBehaviour
     public void InitializeGrid()
     {
         GameObject gridParent = new GameObject("Grid");
+
         for (int x = 0; x < gc.width; x++)
         {
             for (int y = 0; y < gc.height; y++)
@@ -56,75 +59,65 @@ public class GridController : MonoBehaviour
             return;
         }
 
-        if(gc.enemies.Count > 15)
+        if(gc.enemies.Count > 30)
         {
             gridBounds[0] = 0;
-            gridBounds[1] = 7; 
+            gridBounds[1] = 9; 
             gridBounds[2] = 0; 
-            gridBounds[3] = 7;
-            StartCoroutine(gc.ChangeCameraOrthoSize(1.3f));
+            gridBounds[3] = 9;
+            StartCoroutine(gc.ChangeCameraOrthoSize(100));
         }
-
-        else if(gc.enemies.Count > 5)
+        else if(gc.enemies.Count > 12)
         {
-            //??????? Her şeyin 3 e 3 den büyük olduğuna emin olmak lazım
             gridBounds[0] = 1;
-            gridBounds[1] = 6; 
+            gridBounds[1] = 8; 
             gridBounds[2] = 1; 
-            gridBounds[3] = 6;
-            StartCoroutine(gc.ChangeCameraOrthoSize(1.55f));
+            gridBounds[3] = 8;
+            StartCoroutine(gc.ChangeCameraOrthoSize(85));
         }
 
-        else
+        else if(gc.enemies.Count > 0)
         {
             //??????? Her şeyin 3 e 3 den büyük olduğuna emin olmak lazım
             gridBounds[0] = 2;
-            gridBounds[1] = 5; 
+            gridBounds[1] = 7; 
             gridBounds[2] = 2; 
-            gridBounds[3] = 5;
-            StartCoroutine(gc.ChangeCameraOrthoSize(2f));
+            gridBounds[3] = 7;
+            StartCoroutine(gc.ChangeCameraOrthoSize(70));
         }
 
         gc.player.ChangeGridBounds();
     }
 
     //Level başlarında grid size ı düzeltmek için kullan.
-    public void ChangeGridBounds(int no)
+    public void ResetGridBounds()
     {
-        print("hwy");
-        if (gridBounds.Count < 4)
-        {
-            Debug.LogError("GridBounds list does not contain enough elements!");
-            return;
-        }
-
-        if(gc.enemies.Count > 15)
+        if(gc.levelNo > 30)
         {
             gridBounds[0] = 0;
-            gridBounds[1] = 7; 
+            gridBounds[1] = 9; 
             gridBounds[2] = 0; 
-            gridBounds[3] = 7;
-            StartCoroutine(gc.ChangeCameraOrthoSize(1.3f));
+            gridBounds[3] = 9;
+            StartCoroutine(gc.ChangeCameraOrthoSize(100));
         }
 
-        else if(gc.enemies.Count > 5)
+        else if(gc.levelNo > 12)
         {
-            //??????? Her şeyin 3 e 3 den büyük olduğuna emin olmak lazım
             gridBounds[0] = 1;
-            gridBounds[1] = 6; 
+            gridBounds[1] = 8; 
             gridBounds[2] = 1; 
-            gridBounds[3] = 6;
-            StartCoroutine(gc.ChangeCameraOrthoSize(1.55f));
+            gridBounds[3] = 8;
+            StartCoroutine(gc.ChangeCameraOrthoSize(85));
         }
 
-        else
+        else if(gc.levelNo > 0)
         {
             //??????? Her şeyin 3 e 3 den büyük olduğuna emin olmak lazım
             gridBounds[0] = 2;
-            gridBounds[1] = 5; 
+            gridBounds[1] = 7; 
             gridBounds[2] = 2; 
-            gridBounds[3] = 5;
-            StartCoroutine(gc.ChangeCameraOrthoSize(2f));
+            gridBounds[3] = 7;
+            StartCoroutine(gc.ChangeCameraOrthoSize(70));
         }
 
         gc.player.ChangeGridBounds();
