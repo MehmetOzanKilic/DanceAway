@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 
 public class SpotlightSquare: MonoBehaviour
 {
@@ -97,7 +98,7 @@ public class SpotlightSquare: MonoBehaviour
 
     private bool IsOutside()
     {
-        if (position.x < gridBoundsSpotlight[0] || position.x >= gridBoundsSpotlight[1] || position.y < gridBoundsSpotlight[2] || position.y >= gridBoundsSpotlight[3])
+        if (position.x < 0 || position.x >= 9 || position.y < 0 || position.y >= 9)
         {
             return true; // Out of bounds
         }
@@ -128,45 +129,50 @@ public class SpotlightSquare: MonoBehaviour
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
 
-        Color color;
+        SpriteRenderer childSpriteRenderer = null;
+
+        // Find the child with SpriteRenderer but skip those with SpriteMask
+        foreach (Transform child in transform)
+        {
+            if (child.TryGetComponent(out SpriteRenderer sr) && !child.TryGetComponent<SpriteMask>(out _))
+            {
+                childSpriteRenderer = sr;
+                break; // Stop once the correct child is found
+            }
+        }
+
+        Color color = Color.white; // Default to white
         switch (powerLevel)
         {
             case 2:
                 color = Color.white;
-                color.a = 0.5f;
-                spriteRenderer.color = color;
                 break;
             case 4:
                 color = Color.red;
-                color.a = 0.5f;
-                spriteRenderer.color = color;
                 break;
             case 8:
                 color = Color.green;
-                color.a = 0.5f;
-                spriteRenderer.color = color;
                 break;
             case 16:
                 color = Color.blue;
-                color.a = 0.5f;
-                spriteRenderer.color = color;
                 break;
             case 32:
                 color = Color.yellow;
-                color.a = 0.5f;
-                spriteRenderer.color = color;
                 break;
             case 64:
                 color = Color.gray;
-                color.a = 0.5f;
-                spriteRenderer.color = color;
                 break;
             default:
                 color = Color.black;
-                color.a = 0.5f;
-                spriteRenderer.color = color;
                 break;
         }
+
+        // Set parent sprite's color
+        spriteRenderer.color = color;
+
+        color.a = 0.25f; // Set alpha transparency for child
+
+        childSpriteRenderer.color = color;
     }
 
     // Same as Triangle.
@@ -199,7 +205,7 @@ public class SpotlightSquare: MonoBehaviour
 
     private bool IsValidMove(Vector2Int nextPosition)
     {
-        if (nextPosition.x < gridBoundsSpotlight[0] || nextPosition.x >= gridBoundsSpotlight[1] || nextPosition.y < gridBoundsSpotlight[2] || nextPosition.y >= gridBoundsSpotlight[3])
+        if (nextPosition.x < 0 || nextPosition.x >= 9 || nextPosition.y < 0 || nextPosition.y >= 9)
         {
             return false; // Out of bounds
         }

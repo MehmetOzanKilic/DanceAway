@@ -18,7 +18,6 @@ public class GridController : MonoBehaviour
         gridBounds.Add(gc.width);
         gridBounds.Add(0);
         gridBounds.Add(gc.height);
-        print(gc.width + "" + gc.height);
 
     }
 
@@ -52,7 +51,6 @@ public class GridController : MonoBehaviour
 
     public void ChangeGridBounds()
     {
-        print("hwy");
         if (gridBounds.Count < 4)
         {
             Debug.LogError("GridBounds list does not contain enough elements!");
@@ -67,7 +65,7 @@ public class GridController : MonoBehaviour
             gridBounds[3] = 9;
             StartCoroutine(gc.ChangeCameraOrthoSize(100));
         }
-        else if(gc.enemies.Count > 12)
+        else if(gc.enemies.Count > 18)
         {
             gridBounds[0] = 1;
             gridBounds[1] = 8; 
@@ -76,7 +74,7 @@ public class GridController : MonoBehaviour
             StartCoroutine(gc.ChangeCameraOrthoSize(85));
         }
 
-        else if(gc.enemies.Count > 0)
+        else if(gc.enemies.Count > 3)
         {
             //??????? Her şeyin 3 e 3 den büyük olduğuna emin olmak lazım
             gridBounds[0] = 2;
@@ -85,6 +83,16 @@ public class GridController : MonoBehaviour
             gridBounds[3] = 7;
             StartCoroutine(gc.ChangeCameraOrthoSize(70));
         }
+        
+        else if(gc.enemies.Count > 0)
+        {
+            gridBounds[0] = 3;
+            gridBounds[1] = 6; 
+            gridBounds[2] = 3; 
+            gridBounds[3] = 6;
+            StartCoroutine(gc.ChangeCameraOrthoSize(55));
+        }
+
 
         gc.player.ChangeGridBounds();
     }
@@ -101,7 +109,7 @@ public class GridController : MonoBehaviour
             StartCoroutine(gc.ChangeCameraOrthoSize(100));
         }
 
-        else if(gc.levelNo > 12)
+        else if(gc.levelNo > 18)
         {
             gridBounds[0] = 1;
             gridBounds[1] = 8; 
@@ -110,7 +118,7 @@ public class GridController : MonoBehaviour
             StartCoroutine(gc.ChangeCameraOrthoSize(85));
         }
 
-        else if(gc.levelNo > 0)
+        else if(gc.levelNo > 3)
         {
             //??????? Her şeyin 3 e 3 den büyük olduğuna emin olmak lazım
             gridBounds[0] = 2;
@@ -120,11 +128,19 @@ public class GridController : MonoBehaviour
             StartCoroutine(gc.ChangeCameraOrthoSize(70));
         }
 
+        else if(gc.levelNo > 0)
+        {
+            gridBounds[0] = 3;
+            gridBounds[1] = 6; 
+            gridBounds[2] = 3; 
+            gridBounds[3] = 6;
+            StartCoroutine(gc.ChangeCameraOrthoSize(55));
+        }
+
         gc.player.ChangeGridBounds();
     }
     /*public void ChangeGridBounds()
     {
-        print("hwy");
         if (gridBounds.Count < 4)
         {
             Debug.LogError("GridBounds list does not contain enough elements!");

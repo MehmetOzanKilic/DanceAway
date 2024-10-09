@@ -83,7 +83,6 @@ public class BeatTimer : MonoBehaviour
             {
                 if(beatCounter%16==0)
                 {
-                    print("inside%16");
                     if(play)
                     {
                         PlayBack();
@@ -109,7 +108,6 @@ public class BeatTimer : MonoBehaviour
             {
                 OnBeat?.Invoke();
                 beatCounter++;
-                //print(beatCounter);
                 beatFlag=false;
             }
         }       

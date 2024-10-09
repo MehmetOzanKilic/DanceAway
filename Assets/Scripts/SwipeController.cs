@@ -7,6 +7,7 @@ public class SwipeController : MonoBehaviour
     [SerializeField]private Player player;
     private Vector2 startTouchPosition, endTouchPosition;
     private bool isSwipe;
+    public bool canSwipe;
     
     [SerializeField] private float minSwipeDistance = 50f; // Minimum swipe distance in pixels
     private RectTransform swipeAreaRectTransform;
@@ -15,6 +16,7 @@ public class SwipeController : MonoBehaviour
     {
         // Get the RectTransform of the UI element where you want to detect swipes
         swipeAreaRectTransform = GetComponent<RectTransform>();
+        canSwipe=true;
     }
 
     void Update()
@@ -46,6 +48,7 @@ public class SwipeController : MonoBehaviour
                         if (Vector2.Distance(startTouchPosition, endTouchPosition) >= minSwipeDistance)
                         {
                             DetectSwipeDirection();
+                            canSwipe=false;
                         }
                         isSwipe = false; // Reset the swipe flag
                     }
@@ -69,12 +72,20 @@ public class SwipeController : MonoBehaviour
             if (x > 0)
             {
                 //Debug.Log("Swipe Right");
-                if (isSwipe)player.Move(Vector2Int.right);
+                if (isSwipe)
+                {
+                    player.Move(Vector2Int.right);
+                    player.transform.eulerAngles = new Vector3(0,0,270);
+                }
             }
             else
             {
                 //Debug.Log("Swipe Left");
-                if (isSwipe)player.Move(Vector2Int.left);
+                if (isSwipe)
+                {
+                    player.Move(Vector2Int.left);
+                    player.transform.eulerAngles = new Vector3(0,0,90);
+                }
             }
         }
         else
@@ -82,12 +93,20 @@ public class SwipeController : MonoBehaviour
             if (y > 0)
             {
                 //Debug.Log("Swipe Up");
-                if (isSwipe)player.Move(Vector2Int.up);
+                if (isSwipe)
+                {
+                    player.Move(Vector2Int.up);
+                    player.transform.eulerAngles = new Vector3(0,0,0);
+                }
             }
             else
             {
                 //Debug.Log("Swipe Down");
-                if (isSwipe)player.Move(Vector2Int.down);
+                if (isSwipe)
+                {
+                    player.Move(Vector2Int.down);
+                    player.transform.eulerAngles = new Vector3(0,0,180);
+                }
             }
         }
     }

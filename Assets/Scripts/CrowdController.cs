@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.UIElements;
 using static GameController;
 
 public class CrowdController : MonoBehaviour
@@ -22,7 +22,8 @@ public class CrowdController : MonoBehaviour
     private Vector3 leftCrowdPos;
     private Vector3 rightCrowdPos;
     private Vector3 bottomCrowdPos;
-    private Vector3 topCrowdPos;  
+    private Vector3 topCrowdPos;
+    private Vector3 gridMiddle;  
     void Start()
     {
         
@@ -36,6 +37,7 @@ public class CrowdController : MonoBehaviour
         crowdParentTop = new GameObject("CrowdTop");*/
         crowd = new List<GameObject>();
         gc = GameObject.Find("GameController").GetComponent<GameController>();
+        gridMiddle = new Vector3(gc.tileSize*4.5f,gc.tileSize*4.5f,0);
         //SpawnCrowd(beatTimer,width,height,tileSize);
         GetAllCTriangles(beatTimer);
     }
@@ -50,19 +52,27 @@ public class CrowdController : MonoBehaviour
     {
         for (int i = 0; i<crowdParentLeft.transform.childCount;i++)
         {
-            crowd.Add(crowdParentLeft.transform.GetChild(i).gameObject);
+            GameObject temp = crowdParentLeft.transform.GetChild(i).gameObject;
+            crowd.Add(temp);
+            temp.GetComponent<SpriteRenderer>().sortingOrder = (int)(gridMiddle.x - temp.transform.position.x); 
         }
         for (int i = 0; i<crowdParentRight.transform.childCount;i++)
         {
-            crowd.Add(crowdParentRight.transform.GetChild(i).gameObject);
+            GameObject temp = crowdParentRight.transform.GetChild(i).gameObject;
+            crowd.Add(temp);
+            temp.GetComponent<SpriteRenderer>().sortingOrder = (int)(temp.transform.position.x - gridMiddle.x) + 3;
         }
         for (int i = 0; i<crowdParentBottom.transform.childCount;i++)
         {
-                crowd.Add(crowdParentBottom.transform.GetChild(i).gameObject);
+            GameObject temp = crowdParentBottom.transform.GetChild(i).gameObject;
+            crowd.Add(temp);
+            temp.GetComponent<SpriteRenderer>().sortingOrder = (int)(gridMiddle.y-temp.transform.position.y);
         }
         for (int i = 0; i<crowdParentTop.transform.childCount;i++)
         {
-            crowd.Add(crowdParentTop.transform.GetChild(i).gameObject);
+            GameObject temp = crowdParentTop.transform.GetChild(i).gameObject;
+            crowd.Add(temp);
+            temp.GetComponent<SpriteRenderer>().sortingOrder = (int)(temp.transform.position.y-gridMiddle.y);
         }
     
         foreach (GameObject triangle in crowd)
@@ -87,7 +97,6 @@ public class CrowdController : MonoBehaviour
         
         // The number of initial nodders according to the crowd number
         int initialNoddernum = (int)(notNodders.Count*initialNodderPer);
-        print((int)(notNodders.Count*initialNodderPer));
         // Randomly activating nodding for some cTriangles.
         for(int i = 0; i<initialNoddernum; i++)
         {

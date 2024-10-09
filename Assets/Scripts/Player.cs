@@ -62,6 +62,7 @@ public class Player : MonoBehaviour
     private int mult;
     public void Move(Vector2Int direction,bool pushed=false)
     {
+        print("moving");
         Vector2Int newPosition;
         State = beatTimer.State;
         currentDirection = direction;// To use later if the player walks into a triangle.
@@ -109,7 +110,7 @@ public class Player : MonoBehaviour
                 else if (State == BeatState.OffBeat)
                 {
                     // Moving during off beat is punishing.
-                    scoreIncrement=-400;// Make a large score deduction.
+                    scoreIncrement=-200;// Make a large score deduction.
                     beatStateText.text = "F";
                     gameController.LessNodders(50);// Decrease the number of cTriangles Nodding.
                     StartCoroutine(WrongMove(direction));
@@ -134,10 +135,9 @@ public class Player : MonoBehaviour
 
             // Giving negative score without the spotlight multiplier
             if(validMove)score += scoreIncrement*mult;
-            else score += scoreIncrement;
 
             // Updating score and avarage
-            scoreText.text = position.ToString();
+            scoreText.text = score.ToString();
             beatStateAnimator.Play("BeatStateText",-1,0f);
             gameController.avarage = score/((moveCount%16)+1);
         }
@@ -202,10 +202,10 @@ public class Player : MonoBehaviour
         }
 
         // Calculate the maximum power level among all triangles
-        int maxPower = gameController.enemies.Max(t => t.powerLevel);
+        int minPower = gameController.enemies.Min(t => t.powerLevel);
 
         // Find the first triangle with the maximum power level
-        var strongestTriangle = gameController.enemies.FirstOrDefault(t => t.powerLevel == maxPower);
+        var strongestTriangle = gameController.enemies.FirstOrDefault(t => t.powerLevel == minPower);
 
         // If a triangle is found, deal damage to it
         if (strongestTriangle != null)
@@ -252,7 +252,6 @@ public class Player : MonoBehaviour
             if(Triangle.cachedTriangles.TryGetValue(other.gameObject, out triangle))
             {
                 TakeDamage(triangle.powerLevel);
-                print("damageTaken: "+triangle.powerLevel);
             }
         }
 
@@ -315,7 +314,6 @@ public class Player : MonoBehaviour
         {
             for(int i = gridBoundsPlayer[2]-position.y; i > 0; i--)
             {
-                print("moveup");
                 Move(Vector2Int.up,true);
             }
         }

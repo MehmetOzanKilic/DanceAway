@@ -208,7 +208,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   spotlightPrefab: {fileID: 7483423840028306526, guid: 5edc494a21043b346bf6d5d00f7233e2, type: 3}
-  baseHealth: 1
+  baseHealth: 125
   health: 100
   speed: 0
   gridBounds: 
@@ -221,6 +221,7 @@ MonoBehaviour:
   powerLevel: 2
   moveCount: 0
   isChasingPlayer: 0
+  healthText: {fileID: 0}
   chaseBreak: 1
 --- !u!50 &6982466518882275091
 Rigidbody2D:

@@ -8,6 +8,8 @@ using UnityEngine.Audio;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+using static SwipeController;
+
 namespace Common.Enums
 {
     public enum BeatState
@@ -53,6 +55,7 @@ public class GameController : MonoBehaviour
     private LevelManager levelManager;
     private EnemySpawner enemySpawner;
     private GridController gridController;
+    private SwipeController swipeController;
 
     void Start()
     {
@@ -67,6 +70,7 @@ public class GameController : MonoBehaviour
         gridController = GetComponent<GridController>();
         gridController.Initialize();
         crowdController.Initialize(beatTimer,width,height,tileSize);
+        swipeController = GameObject.Find("SwipeController").GetComponent<SwipeController>();
 
         CenterCamera();
 
@@ -101,6 +105,8 @@ public class GameController : MonoBehaviour
     {
 
         beatCounter++;
+
+        swipeController.canSwipe=true;
 
         StartCoroutine(HandleBeatCoroutine());
         
@@ -156,7 +162,7 @@ public class GameController : MonoBehaviour
         }
 
         // After all enemies have moved, handle grid bounds change if needed
-        if (gridBoundsFlag && enemiesKilled >= 5)
+        if (gridBoundsFlag && enemiesKilled >= 5 && enemies.Count > 1)
         {
             gridController.ChangeGridBounds();
             crowdController.ResizeCrowd();
@@ -189,7 +195,6 @@ public class GameController : MonoBehaviour
     public void PlayHand()
     {   
         // Plays different hands(beats) according to both the avarage of the player and the current level no.
-        print("avarage: " + avarage);
         if(avarage<100)
         {
             audioSources[1].Stop();
@@ -359,19 +364,20 @@ public class GameController : MonoBehaviour
         int numberOfTriangles = mergeCandidates.Count;
         Triangle baseTriangle = mergeCandidates[0];
 
-        int healthSum=0;
+        int healthSum=0;//how much health triangle lost
         foreach (var triangle in mergeCandidates)
         {
+            healthSum+=(triangle.baseHealth*triangle.powerLevel)-triangle.health;
             if (triangle != baseTriangle)
             {
                 RemoveEnemy(triangle);
                 UpdateChasingTriangle();
+                //var temp = triangle.powerLevel;// does not work correctly if this comment is not here
                 Destroy(triangle.gameObject);
-                healthSum+=triangle.health;
             }
         }
 
-        baseTriangle.MergeTriangles(numberOfTriangles,baseTriangle.health+healthSum);
+        baseTriangle.MergeTriangles(numberOfTriangles,healthSum);
     }
 
     public void MergeSpotlights(List<SpotlightSquare> mergeCandidates)
@@ -409,10 +415,10 @@ public class GameController : MonoBehaviour
 
 
 
-    public float cameraTransitionDuration = 1f;
+    public float cameraTransitionDuration = 3f;
     public IEnumerator ChangeCameraOrthoSize(float f)
     {
-        float timePassed = 0.1f;
+        float timePassed = 0;
         float initialSize = Camera.main.orthographicSize;
         float targetSize = arenaWidth / (f*screenAspect);
 
@@ -427,7 +433,7 @@ public class GameController : MonoBehaviour
     }
     public IEnumerator ChangeCameraOrthoSize(int i)
     {
-        float timePassed = 0.1f;
+        float timePassed = 0;
         float initialSize = Camera.main.orthographicSize;
         float targetSize = i;
 
@@ -570,7 +576,6 @@ public class GameController : MonoBehaviour
     public List<int> ReturnGridbounds()
     {
         List<int> tempBounds = new List<int>();
-        print("herehere");
         for(int i=0; i<4; i++)
         {
             tempBounds.Add(gridBounds[i]);

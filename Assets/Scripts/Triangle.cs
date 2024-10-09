@@ -2,12 +2,13 @@ using UnityEngine;
 using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using System.Collections;
+using UnityEngine.UI;
 
 public class Triangle : MonoBehaviour
 {
     [SerializeField]private GameObject spotlightPrefab;
-    [SerializeField]private int baseHealth=1;
-    [HideInInspector]public int health;
+    [SerializeField]public int baseHealth=1;
+    public int health;
     [SerializeField]private float speed;
     [SerializeField]private List<int> gridBounds = new List<int>();// width lower(0)/upper(1), height lower(2)/upper(3)    
     [HideInInspector]public Vector2Int position;
@@ -17,7 +18,7 @@ public class Triangle : MonoBehaviour
     public AudioClip moveSound; // Sound to play when the triangle moves
     [HideInInspector]public Vector2Int nextPosition; // Make nextPosition public
     [HideInInspector]public Vector2Int currentDirection; // Make currentDirection public
-    [HideInInspector]public int powerLevel = 2; // Starting power level for triangles
+    public int powerLevel = 2; // Starting power level for triangles
     [HideInInspector]public int moveCount = 0; // Move counter starting at 0
     private SpriteRenderer spriteRenderer;
     private AudioSource audioSource;
@@ -25,8 +26,6 @@ public class Triangle : MonoBehaviour
     private Rigidbody2D rb;
     [HideInInspector]public bool isChasingPlayer = false;
     [HideInInspector]public static Dictionary<GameObject, Triangle> cachedTriangles = new Dictionary<GameObject, Triangle>();
-
-
     public void Initialize(Vector2Int initialPosition, GameController controller, BeatTimer timer)
     {
         // Giving initial parameters
@@ -187,7 +186,6 @@ public class Triangle : MonoBehaviour
 
     private Vector2Int GetDirectionTowardsGrid()
     {
-        print("trying");
         if (position.x <= gridBounds[0]-1) // Coming from the left
         {
             return Vector2Int.right;
@@ -234,7 +232,7 @@ public class Triangle : MonoBehaviour
     public void MergeTriangles(int numberOfTriangles, int combinedHealth)
     {
         powerLevel = powerLevel * (int)Mathf.Pow(2, numberOfTriangles - 1);
-        health = combinedHealth + (powerLevel*baseHealth/2);
+        health = (powerLevel*baseHealth)-combinedHealth;
         UpdateColor(); // Update the color based on the new power level
     }
 
