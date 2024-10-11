@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using Common.Enums;
-using UnityEditor.Animations;
+//using UnityEditor.Animations;
 using System;
 using System.Data.Common;
 
@@ -12,14 +12,19 @@ public class Player : MonoBehaviour
 {
     [SerializeField]private Text scoreText;
     [SerializeField]private Text beatStateText;
+    [SerializeField]private Text multText;
+    [SerializeField]private Text scoreIncText;
+    [SerializeField]private Slider healthSlider;
     public int score;
-    private int maxHealth=100;
+    private int maxHealth=50;
     public int health; // Player starting health
     public Vector2Int position;
     private GameController gameController; // Reference to GameController
     private BeatTimer beatTimer;
     private Animator animator;
     private Animator beatStateAnimator;
+    private Animator multTextAnimator;
+    private Animator scoreIncTextAnimator;
     private Rigidbody2D rb;
     public BeatState State { get; set; }
     private float tileSize;
@@ -46,10 +51,18 @@ public class Player : MonoBehaviour
         // Starting animation
         animator = GetComponent<Animator>();
         beatStateAnimator = beatStateText.GetComponent<Animator>();
+        multTextAnimator = multText.GetComponent<Animator>();
+        scoreIncTextAnimator = scoreIncText.GetComponent<Animator>();
         animator.Play("idle");
+
+        beatStateText.text = "";
+        multText.text="";
+        scoreIncText.text="";
 
         rb = GetComponent<Rigidbody2D>();
         health = maxHealth;
+        healthSlider.maxValue = maxHealth;
+        healthSlider.value = maxHealth;
 
     }
 
@@ -62,7 +75,6 @@ public class Player : MonoBehaviour
     private int mult;
     public void Move(Vector2Int direction,bool pushed=false)
     {
-        print("moving");
         Vector2Int newPosition;
         State = beatTimer.State;
         currentDirection = direction;// To use later if the player walks into a triangle.
@@ -84,44 +96,42 @@ public class Player : MonoBehaviour
         {
             int scoreIncrement = 0;
             CheckForSpotlightCollision();// Find out how much mult is.
-            if(gameController.enemies.Count > 0)
+            
+            moveCount++;// Only count moves if there are enemies.
+            if (State == BeatState.PerfectBeat)
             {
-                moveCount++;// Only count moves if there are enemies.
-                if (State == BeatState.PerfectBeat)
-                {
-                    scoreIncrement = 200; // Perfect score threshold
-                    beatStateText.text = "S";
-                }
-                else if (State == BeatState.CloseBeat)
-                {
-                    scoreIncrement = 150; // Close score threshold
-                    beatStateText.text = "A";
-                }
-                else if (State == BeatState.MiddleBeat)
-                {
-                    scoreIncrement = 100; // Middle score threshold
-                    beatStateText.text = "B";
-                }
-                else if (State == BeatState.FarBeat)
-                {
-                    scoreIncrement = 50; // Far score threshold
-                    beatStateText.text = "C";
-                }
-                else if (State == BeatState.OffBeat)
-                {
-                    // Moving during off beat is punishing.
-                    scoreIncrement=-200;// Make a large score deduction.
-                    beatStateText.text = "F";
-                    gameController.LessNodders(50);// Decrease the number of cTriangles Nodding.
-                    StartCoroutine(WrongMove(direction));
-                }
-                else
-                {
-                    scoreIncrement = 0;
-                    beatStateText.text = "WTF";
-                }
-
+                scoreIncrement = 200; // Perfect score threshold
+                beatStateText.text = "S";
             }
+            else if (State == BeatState.CloseBeat)
+            {
+                scoreIncrement = 150; // Close score threshold
+                beatStateText.text = "A";
+            }
+            else if (State == BeatState.MiddleBeat)
+            {
+                scoreIncrement = 100; // Middle score threshold
+                beatStateText.text = "B";
+            }
+            else if (State == BeatState.FarBeat)
+            {
+                scoreIncrement = 50; // Far score threshold
+                beatStateText.text = "C";
+            }
+            else if (State == BeatState.OffBeat)
+            {
+                // Moving during off beat is punishing.
+                scoreIncrement=0;// Make a large score deduction.
+                beatStateText.text = "F";
+                StartCoroutine(WrongMove(direction));
+            }
+            else
+            {
+                scoreIncrement = 0;
+                beatStateText.text = "WTF";
+            }
+
+
 
             // Update player's position and move player.           
             if(validMove)
@@ -132,14 +142,18 @@ public class Player : MonoBehaviour
             
             //Only one triangle with the highest powerLevel gets hit.
             HitStrongestTriangle(scoreIncrement*mult);
+            multText.text = "x" + mult.ToString();
 
             // Giving negative score without the spotlight multiplier
             if(validMove)score += scoreIncrement*mult;
+            scoreIncText.text = "+" + (scoreIncrement*mult).ToString();
 
             // Updating score and avarage
             scoreText.text = score.ToString();
             beatStateAnimator.Play("BeatStateText",-1,0f);
-            gameController.avarage = score/((moveCount%16)+1);
+            multTextAnimator.Play("MultText",-1,0f);
+            scoreIncTextAnimator.Play("ScoreIncText",-1,0f);
+            gameController.avarage+= scoreIncrement;
         }
 
         else
@@ -150,10 +164,6 @@ public class Player : MonoBehaviour
         StartCoroutine(ResetAnimation("Player_Moving"));
     }
 
-    private void Push()
-    {
-
-    }
 
     private void CheckForSpotlightCollision()
     {
@@ -219,6 +229,8 @@ public class Player : MonoBehaviour
         if(!takingDamage)
         {
             health -= damage;
+            gameController.LessNodders(100);// Decrease the number of cTriangles Nodding.
+            healthSlider.value = health;
             Move(-currentDirection);
             if (health <= 0)
             {

@@ -191,9 +191,11 @@ public class GameController : MonoBehaviour
             highestPowerTriangle.isChasingPlayer = true;
     }
 
-    public int avarage;// To keep track of how good the player is doing
+    public int avarage=0;// To keep track of how good the player is doing
     public void PlayHand()
     {   
+        avarage=avarage/16;
+        print(avarage);
         // Plays different hands(beats) according to both the avarage of the player and the current level no.
         if(avarage<100)
         {
@@ -207,13 +209,13 @@ public class GameController : MonoBehaviour
         {
             audioSources[1].volume = 0.3f;
             audioSources[1].Play();
-            crowdController.MoreNodders(10);
+            crowdController.MoreNodders(20);
         }
         if(avarage>=150)
         {
             audioSources[2].volume = 0.3f;
             audioSources[2].Play();
-            crowdController.MoreNodders(20);
+            crowdController.MoreNodders(50);
         }
         
         if(levelNo>=30)
@@ -231,11 +233,19 @@ public class GameController : MonoBehaviour
             audioSources[3].volume = 0.3f;
             audioSources[3].Play();
         } 
+        avarage=0;
     }
 
     public void PlayBack()
     {
         audioSources[0].Play();
+    }
+
+    public void PlayBackground()
+    {
+        beatTimer.backgroundAudio=audioSources[6];
+        audioSources[6].volume=0.05f;
+        audioSources[6].Play();
     }
 
     public void LessNodders(int no)
