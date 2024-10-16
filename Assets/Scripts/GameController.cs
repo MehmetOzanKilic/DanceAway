@@ -106,8 +106,6 @@ public class GameController : MonoBehaviour
 
         beatCounter++;
 
-        swipeController.canSwipe=true;
-
         StartCoroutine(HandleBeatCoroutine());
         
         foreach (var spotlight in spotlights)
@@ -195,7 +193,7 @@ public class GameController : MonoBehaviour
     public void PlayHand()
     {   
         avarage=avarage/16;
-        print(avarage);
+        //print(avarage);
         // Plays different hands(beats) according to both the avarage of the player and the current level no.
         if(avarage<100)
         {
@@ -251,6 +249,10 @@ public class GameController : MonoBehaviour
     public void LessNodders(int no)
     {
         crowdController.LessNodders(no);
+    }
+    public void MoreNodders(int no)
+    {
+        crowdController.MoreNodders(no);
     }
 
 
@@ -537,10 +539,7 @@ public class GameController : MonoBehaviour
     // Function to handle collecting the heart
     public void CollectHeart(GameObject heart)
     {
-        // Add logic here to increase the player's health or score
-        Debug.Log("Heart collected!");
-
-        player.TakeDamage(-10);
+        player.TakeHeart(10);
         // Remove the heart from the list and destroy the heart object
         hearts.Remove(heart);
         Destroy(heart);

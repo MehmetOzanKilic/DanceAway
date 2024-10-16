@@ -10,21 +10,20 @@ public class BeatTimer : MonoBehaviour
     [SerializeField] public float beatInterval = 0.6f; // Time between beats in seconds
     private GameController gameController;
     public event Action OnBeat;
-    public SpriteRenderer backGround;
-    public double timer;
-    public float tolerance = 0.04f;
+    private SpriteRenderer backGround;
+    private double timer;
+    private float tolerance;
     public BeatState State { get; set; }
     public bool play;
     public int beatCounter;
 
     public AudioSource backgroundAudio;
-    private double lastBeatTime;
 
     void Awake()
     {
         backGround = GameObject.Find("BackGround").GetComponent<SpriteRenderer>();
         gameController = GetComponent<GameController>();
-        lastBeatTime = AudioSettings.dspTime;
+        tolerance = beatInterval/10;
     }
 
     void Start()
@@ -54,7 +53,6 @@ public class BeatTimer : MonoBehaviour
 
     private void PlayBack()
     {   
-        print("playback");
         if (gameController) gameController.PlayBack();
     }
 
@@ -71,17 +69,13 @@ public class BeatTimer : MonoBehaviour
         double modTimer = (double)(float)Math.Round(timer % beatInterval, 2);
         UpdateBeatState(modTimer);
 
-        if (modTimer <= 4*tolerance && beatFlag)
+        if (modTimer <= tolerance && beatFlag)
         {
             OnBeat?.Invoke();
             beatCounter++;
             beatFlag = false; // Ensure the beat is only triggered once per interval
         }
 
-        else if (modTimer > 4*tolerance)
-        {
-            beatFlag = true; // Reset beat flag for the next beat cycle
-        }
     }
 
     private void UpdateBeatState(double modTimer)

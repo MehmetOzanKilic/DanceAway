@@ -141,8 +141,7 @@ public class Player : MonoBehaviour
             }
             
             //Only one triangle with the highest powerLevel gets hit.
-            HitStrongestTriangle(scoreIncrement*mult);
-            multText.text = "x" + mult.ToString();
+            HitWeakestTriangle(scoreIncrement*mult);
 
             // Giving negative score without the spotlight multiplier
             if(validMove)score += scoreIncrement*mult;
@@ -154,6 +153,7 @@ public class Player : MonoBehaviour
             multTextAnimator.Play("MultText",-1,0f);
             scoreIncTextAnimator.Play("ScoreIncText",-1,0f);
             gameController.avarage+= scoreIncrement;
+            multText.text = "x" + mult.ToString();
         }
 
         else
@@ -204,7 +204,7 @@ public class Player : MonoBehaviour
         if(!takingDamage)animator.Play("idle");
     }
 
-    private void HitStrongestTriangle(int damage)
+    private void HitWeakestTriangle(int damage)
     {
         if (gameController.enemies.Count == 0)
         {
@@ -215,12 +215,12 @@ public class Player : MonoBehaviour
         int minPower = gameController.enemies.Min(t => t.powerLevel);
 
         // Find the first triangle with the maximum power level
-        var strongestTriangle = gameController.enemies.FirstOrDefault(t => t.powerLevel == minPower);
+        var weakestTriangle = gameController.enemies.FirstOrDefault(t => t.powerLevel == minPower);
 
         // If a triangle is found, deal damage to it
-        if (strongestTriangle != null)
+        if (weakestTriangle != null)
         {
-            strongestTriangle.TakeDamage(damage);
+            weakestTriangle.TakeDamage(damage);
         }
     }
 
@@ -229,7 +229,7 @@ public class Player : MonoBehaviour
         if(!takingDamage)
         {
             health -= damage;
-            gameController.LessNodders(100);// Decrease the number of cTriangles Nodding.
+            gameController.LessNodders(20);// Decrease the number of cTriangles Nodding.
             healthSlider.value = health;
             Move(-currentDirection);
             if (health <= 0)
@@ -241,6 +241,21 @@ public class Player : MonoBehaviour
 
             StartCoroutine(DamageTaken());
         }
+    }
+    public void TakeHeart(int heal)
+    {
+
+        health += heal;
+        gameController.MoreNodders(20);// Decrease the number of cTriangles Nodding.
+        healthSlider.value = health;
+        if (health > maxHealth)
+        {
+            health = maxHealth;
+            gameController.MoreNodders(20);
+        }
+
+        StartCoroutine(HealTaken());
+        
     }
 
     private bool takingDamage = false;
@@ -254,6 +269,17 @@ public class Player : MonoBehaviour
         animator.Play("idle");
         takingDamage=false;
     }
+    private IEnumerator HealTaken()
+    {
+        animator.Play("Player_Heal");
+        takingDamage = true;
+
+        yield return new WaitForSeconds(beatTimer.beatInterval);
+
+        animator.Play("idle");
+        takingDamage=false;
+    }
+
 
     private bool crowdPushFlag=true;
     void OnTriggerEnter2D(Collider2D other)

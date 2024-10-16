@@ -26,7 +26,8 @@ public class Triangle : MonoBehaviour
     private Rigidbody2D rb;
     [HideInInspector]public bool isChasingPlayer = false;
     [HideInInspector]public static Dictionary<GameObject, Triangle> cachedTriangles = new Dictionary<GameObject, Triangle>();
-    public void Initialize(Vector2Int initialPosition, GameController controller, BeatTimer timer)
+    private int speedMult = 5;
+    public void  Initialize(Vector2Int initialPosition, GameController controller, BeatTimer timer)
     {
         // Giving initial parameters
         position = initialPosition;
@@ -42,7 +43,7 @@ public class Triangle : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
         // Adjusting speed for correct movement
-        speed = gameController.tileSize/(beatTimer.beatInterval/3);
+        speed = gameController.tileSize/(beatTimer.beatInterval/speedMult);
         // Resetin health to full in each Initializetion while multiplying with the power level
         health = powerLevel * baseHealth;
         // Initial animation 
@@ -70,7 +71,7 @@ public class Triangle : MonoBehaviour
     void FixedUpdate()
     {
         // Snap to the position
-        if (moveTimer >= beatTimer.beatInterval / 3 && canMove)
+        if (moveTimer >= beatTimer.beatInterval / speedMult && canMove)
         {
             transform.position=new Vector3(nextPosition.x*gameController.tileSize,nextPosition.y*gameController.tileSize,0);
             canMove = false;
@@ -78,7 +79,7 @@ public class Triangle : MonoBehaviour
         }
 
         // Move to the next position
-        if (canMove && moveTimer < beatTimer.beatInterval / 3)
+        if (canMove && moveTimer < beatTimer.beatInterval / speedMult)
         {
             float moveDistance = speed * Time.fixedDeltaTime; // Distance to move in one frame
             rb.MovePosition(rb.position + new Vector2(currentDirection.x * moveDistance, currentDirection.y * moveDistance));

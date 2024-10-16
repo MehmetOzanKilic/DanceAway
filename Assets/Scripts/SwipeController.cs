@@ -7,7 +7,6 @@ public class SwipeController : MonoBehaviour
     [SerializeField]private Player player;
     private Vector2 startTouchPosition, endTouchPosition;
     private bool isSwipe;
-    public bool canSwipe;
     
     [SerializeField] private float minSwipeDistance = 50f; // Minimum swipe distance in pixels
     private RectTransform swipeAreaRectTransform;
@@ -16,7 +15,6 @@ public class SwipeController : MonoBehaviour
     {
         // Get the RectTransform of the UI element where you want to detect swipes
         swipeAreaRectTransform = GetComponent<RectTransform>();
-        canSwipe=true;
     }
 
     void Update()
@@ -48,7 +46,6 @@ public class SwipeController : MonoBehaviour
                         if (Vector2.Distance(startTouchPosition, endTouchPosition) >= minSwipeDistance)
                         {
                             DetectSwipeDirection();
-                            canSwipe=false;
                         }
                         isSwipe = false; // Reset the swipe flag
                     }
@@ -67,45 +64,93 @@ public class SwipeController : MonoBehaviour
         float x = swipeDirection.x;
         float y = swipeDirection.y;
 
-        if (Mathf.Abs(x) > Mathf.Abs(y))
+        float angleInDegrees = Mathf.Atan2(y, x) * Mathf.Rad2Deg;
+
+        if(20 <= Mathf.Abs(angleInDegrees) && Mathf.Abs(angleInDegrees) <= 70)
         {
-            if (x > 0)
+            if(angleInDegrees > 0)
             {
-                //Debug.Log("Swipe Right");
                 if (isSwipe)
                 {
                     player.Move(Vector2Int.right);
-                    player.transform.eulerAngles = new Vector3(0,0,270);
-                }
-            }
-            else
-            {
-                //Debug.Log("Swipe Left");
-                if (isSwipe)
-                {
-                    player.Move(Vector2Int.left);
-                    player.transform.eulerAngles = new Vector3(0,0,90);
-                }
-            }
-        }
-        else
-        {
-            if (y > 0)
-            {
-                //Debug.Log("Swipe Up");
-                if (isSwipe)
-                {
                     player.Move(Vector2Int.up);
                     player.transform.eulerAngles = new Vector3(0,0,0);
                 }
             }
             else
             {
-                //Debug.Log("Swipe Down");
                 if (isSwipe)
                 {
+                    player.Move(Vector2Int.right);
                     player.Move(Vector2Int.down);
                     player.transform.eulerAngles = new Vector3(0,0,180);
+                }
+            }
+        }
+        else if(110 <= Mathf.Abs(angleInDegrees) && Mathf.Abs(angleInDegrees) <= 160)
+        {
+            if(angleInDegrees > 0)
+            {
+                if (isSwipe)
+                {
+                    player.Move(Vector2Int.left);
+                    player.Move(Vector2Int.up);
+                    player.transform.eulerAngles = new Vector3(0,0,0);
+                }
+            }
+            else
+            {
+                if (isSwipe)
+                {
+                    player.Move(Vector2Int.left);
+                    player.Move(Vector2Int.down);
+                    player.transform.eulerAngles = new Vector3(0,0,180);
+                }
+            }
+        }
+
+        else
+        {
+            if (Mathf.Abs(x) > Mathf.Abs(y))
+            {
+                if (x > 0)
+                {
+                    //Debug.Log("Swipe Right");
+                    if (isSwipe)
+                    {
+                        player.Move(Vector2Int.right);
+                        player.transform.eulerAngles = new Vector3(0,0,270);
+                    }
+                }
+                else
+                {
+                    //Debug.Log("Swipe Left");
+                    if (isSwipe)
+                    {
+                        player.Move(Vector2Int.left);
+                        player.transform.eulerAngles = new Vector3(0,0,90);
+                    }
+                }
+            }
+            else
+            {
+                if (y > 0)
+                {
+                    //Debug.Log("Swipe Up");
+                    if (isSwipe)
+                    {
+                        player.Move(Vector2Int.up);
+                        player.transform.eulerAngles = new Vector3(0,0,0);
+                    }
+                }
+                else
+                {
+                    //Debug.Log("Swipe Down");
+                    if (isSwipe)
+                    {
+                        player.Move(Vector2Int.down);
+                        player.transform.eulerAngles = new Vector3(0,0,180);
+                    }
                 }
             }
         }

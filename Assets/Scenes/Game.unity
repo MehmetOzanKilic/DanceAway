@@ -7732,7 +7732,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   player: {fileID: 917720429}
-  canSwipe: 0
   minSwipeDistance: 5
 --- !u!114 &1106205801
 MonoBehaviour:
@@ -12345,7 +12344,7 @@ MonoBehaviour:
   State: 0
   levelNo: 1
   spotlightSpawnChance: 0.33
-  heartSpawnChance: 0.05
+  heartSpawnChance: 0.95
   crowdController: {fileID: 205434466}
   width: 9
   height: 9
@@ -12396,9 +12395,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   timeS: 1
   beatInterval: 0.6
-  backGround: {fileID: 0}
-  timer: 0
-  tolerance: 0.04
   play: 0
   beatCounter: 0
   backgroundAudio: {fileID: 0}
